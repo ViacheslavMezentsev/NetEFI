@@ -1,4 +1,4 @@
-#include "stdafx.h"
+п»ї#include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
 #include "mcadincl.h"
 #include "netefi.h"
@@ -19,7 +19,7 @@ PMATHCAD_ARRAY_FREE MathcadArrayFree;
 PIS_USER_INTERRUPTED isUserInterrupted;
 
 
-// Эмуляция is из C#.
+// Р­РјСѓР»СЏС†РёСЏ is РёР· C#.
 template < class T, class U > 
 Boolean isinst(U u) {
    
@@ -199,19 +199,19 @@ bool Manager::IsManagedAssembly( String^ fileName ) {
 }
 
 
-// Загрузка пользовательских библиотек.
+// Р—Р°РіСЂСѓР·РєР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… Р±РёР±Р»РёРѕС‚РµРє.
 bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
     try {
 
-        // Списки функций и их карточек.
+        // РЎРїРёСЃРєРё С„СѓРЅРєС†РёР№ Рё РёС… РєР°СЂС‚РѕС‡РµРє.
         Manager::Items = gcnew List< IFunction^ >();
         Manager::Infos = gcnew List < FunctionInfo^ >();
 
-        // Получаем список всех библиотек в текущей папке.
+        // РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє РІСЃРµС… Р±РёР±Р»РёРѕС‚РµРє РІ С‚РµРєСѓС‰РµР№ РїР°РїРєРµ.
         array< String^ > ^ libs = Directory::GetFiles( Path::GetDirectoryName( AssemblyPath ), gcnew String( "*.dll" ) );
 
-        // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
+        // РЎРєР°РЅРёСЂСѓРµРј РєР°Р¶РґС‹Р№ С„Р°Р№Р» РЅР° РЅР°Р»РёС‡РёРµ РєР»Р°СЃСЃРѕРІ, СЂРµР°Р»РёР·СѓСЋС‰РёС… РёРЅС‚РµСЂС„РµР№СЃ IFunction.
     for each ( String^ path in libs ) {
 
         try {
@@ -269,7 +269,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
     }
 
-        // Теперь регистрируем все функции в Mathcad.
+        // РўРµРїРµСЂСЊ СЂРµРіРёСЃС‚СЂРёСЂСѓРµРј РІСЃРµ С„СѓРЅРєС†РёРё РІ Mathcad.
         PBYTE p = pCode;
 
         for ( int n = 0; n < Manager::Items->Count; n++ ) {
@@ -325,14 +325,14 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                     fi.argType[m] = COMPLEX_ARRAY;            
             
-                // TODO: continue для внешнего цикла.
+                // TODO: continue РґР»СЏ РІРЅРµС€РЅРµРіРѕ С†РёРєР»Р°.
                 } else break;
 
             }            
 
             ::CreateUserFunction( hInstance, & fi );  
 
-            // Пересылки константы (номера функции) в глобальную переменную id.
+            // РџРµСЂРµСЃС‹Р»РєРё РєРѕРЅСЃС‚Р°РЅС‚С‹ (РЅРѕРјРµСЂР° С„СѓРЅРєС†РёРё) РІ РіР»РѕР±Р°Р»СЊРЅСѓСЋ РїРµСЂРµРјРµРЅРЅСѓСЋ id.
             * p++ = 0xB8; // mov eax, imm32
             p[0] = n;
             p += sizeof( int );

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+п»ї#include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
 #include "netefi.h"
 
@@ -18,12 +18,12 @@ bool LoadAssemblies( HINSTANCE hInstance ) {
 
 #pragma unmanaged
 
-// Точка входа.
+// РўРѕС‡РєР° РІС…РѕРґР°.
 BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) {
 
     switch ( dwReason ) {
 
-        // DLL проецируется на адресное пространство процесса
+        // DLL РїСЂРѕРµС†РёСЂСѓРµС‚СЃСЏ РЅР° Р°РґСЂРµСЃРЅРѕРµ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРѕ РїСЂРѕС†РµСЃСЃР°
         case DLL_PROCESS_ATTACH: { 
 
             if ( !LoadAssemblies( hinstDLL ) ) { 
@@ -34,17 +34,17 @@ BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved
             break;
         }
 
-        // создаётся поток
+        // СЃРѕР·РґР°С‘С‚СЃСЏ РїРѕС‚РѕРє
         case DLL_THREAD_ATTACH: { break; }
 
-        // поток корректно завершается
+        // РїРѕС‚РѕРє РєРѕСЂСЂРµРєС‚РЅРѕ Р·Р°РІРµСЂС€Р°РµС‚СЃСЏ
         case DLL_THREAD_DETACH: { break; }
 
-        // DLL отключается от адресного пространства процесса
+        // DLL РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ РѕС‚ Р°РґСЂРµСЃРЅРѕРіРѕ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІР° РїСЂРѕС†РµСЃСЃР°
         case DLL_PROCESS_DETACH: { break; }
     }
 
-    return TRUE; // используется только для DLL_PROCESS_ATTACH
+    return TRUE; // РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ DLL_PROCESS_ATTACH
 }
 
 #pragma managed

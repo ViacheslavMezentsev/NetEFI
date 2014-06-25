@@ -84,7 +84,6 @@
     <ClInclude Include="mcadincl.h" />
     <ClInclude Include="netefi.h" />
     <ClInclude Include="Stdafx.h" />
-    <ClInclude Include="strjoin.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />

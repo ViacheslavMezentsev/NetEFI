@@ -17,9 +17,6 @@
     <ClInclude Include="Stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="strjoin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="mcadincl.h">
       <Filter>Header Files</Filter>
     </ClInclude>

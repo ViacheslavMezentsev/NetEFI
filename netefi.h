@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 using namespace System;
 using namespace System::IO;
@@ -46,11 +46,11 @@ namespace NetEFI {
 
 	public:
 
-		Manager() {} // Конструктор
-		~Manager() {} // Деструктор
-		!Manager() {} // Финализатор
+		Manager() {} // РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ
+		~Manager() {} // Р”РµСЃС‚СЂСѓРєС‚РѕСЂ
+		!Manager() {} // Р¤РёРЅР°Р»РёР·Р°С‚РѕСЂ
 
-		// Элементы.
+		// Р­Р»РµРјРµРЅС‚С‹.
 		static List < IFunction^ > ^ Items;
         static List < FunctionInfo^ > ^ Infos;		
 
@@ -84,17 +84,17 @@ namespace NetEFI {
         
         static bool Initialize();
 
-		// Ведение журнала сообщений.
+		// Р’РµРґРµРЅРёРµ Р¶СѓСЂРЅР°Р»Р° СЃРѕРѕР±С‰РµРЅРёР№.
 		static void LogInfo( String^ );
 
 		static void LogError( String^ );
 
         static bool IsManagedAssembly( String^ );
 
-		// Загрузка пользовательских библиотек.
+		// Р—Р°РіСЂСѓР·РєР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… Р±РёР±Р»РёРѕС‚РµРє.
 		static bool LoadAssemblies( HINSTANCE );
 
-		// Обобщённая функция.
+		// РћР±РѕР±С‰С‘РЅРЅР°СЏ С„СѓРЅРєС†РёСЏ.
 		static bool NumericEvaluation( int, array < Object^ > ^, Object ^ % );
 	};
 }
