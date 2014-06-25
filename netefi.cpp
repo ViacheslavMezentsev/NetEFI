@@ -71,9 +71,7 @@ void Manager::LogError( String^ Text ) {
 
 bool Manager::Initialize() {
 
-    try {
-        ::System::IO::File::Delete( Manager::LogFile );
-    } catch (...) {}
+    try { File::Delete( Manager::LogFile ); } catch (...) {}
 
     pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, 1 << 16, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
 
@@ -212,62 +210,62 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
         array< String^ > ^ libs = Directory::GetFiles( Path::GetDirectoryName( AssemblyPath ), gcnew String( "*.dll" ) );
 
         // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
-    for each ( String^ path in libs ) {
-
-        try {
-            
-            if ( !IsManagedAssembly( path ) || path->Equals( AssemblyPath ) ) continue;
-
-            LogInfo( path );
-
-            array<Type^>^ types;
+        for each ( String^ path in libs ) {
 
             try {
+            
+                if ( !IsManagedAssembly( path ) || path->Equals( AssemblyPath ) ) continue;
+
+                LogInfo( path );
+
+                array<Type^>^ types;
+
+                try {
                                      
-                // LoadFile vs. LoadFrom
-                // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
-                Assembly^ assembly = Assembly::GetExecutingAssembly()->LoadFile( path );
+                    // LoadFile vs. LoadFrom
+                    // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
+                    Assembly^ assembly = Assembly::GetExecutingAssembly()->LoadFile( path );
 
-                LogInfo( assembly->ToString() );
+                    LogInfo( assembly->ToString() );
 
-                types = assembly->GetTypes();
+                    types = assembly->GetTypes();
 
-                LogInfo( types->ToString() );
+                    LogInfo( types->ToString() );
+
+                } catch ( System::Exception^ ex ) {
+
+                    LogError( ex->Message );
+                    continue;
+                
+                } catch ( ... ) {
+                    
+                    ::LogError( "Error 1" );
+                    continue;    
+                }
+
+                for each ( Type^ type in types ) {
+
+                    LogInfo( type->ToString() );
+
+                    if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+
+                    Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
+                }
+
+                LogInfo( String::Format( " [LoadLibraries] {0} loaded.", path ) );
 
             } catch ( System::Exception^ ex ) {
 
                 LogError( ex->Message );
                 continue;
-                
+
             } catch ( ... ) {
                     
-                ::LogError( "Error 1" );
+                ::LogError( "Error 2" );
                 continue;    
             }
 
-            for each ( Type^ type in types ) {
-
-                LogInfo( type->ToString() );
-
-                if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
-
-                Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
-            }
-
-            LogInfo( String::Format( " [LoadLibraries] {0} loaded.", path ) );
-
-        } catch ( System::Exception^ ex ) {
-
-            LogError( ex->Message );
-            continue;
-
-        } catch ( ... ) {
-                    
-            ::LogError( "Error 2" );
-            continue;    
         }
-
-    }
 
         // Теперь регистрируем все функции в Mathcad.
         PBYTE p = pCode;
@@ -311,7 +309,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             
             for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
 
-                type = info->Arguments[m]->GetType();
+                type = info->Arguments[m];
 
                 if ( type->Equals( String::typeid ) ) {
 

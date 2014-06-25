@@ -28,7 +28,7 @@ namespace NetEFI {
 		String^ Parameters; 
 		String^ Description;
 		Object^ ReturnType;
-		array < Object^ > ^ Arguments;
+		array < Type^ > ^ Arguments;
 	};
 
 	public interface class IFunction {
