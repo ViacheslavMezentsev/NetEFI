@@ -27,7 +27,7 @@ namespace NetEFI {
 		String^ Name;
 		String^ Parameters; 
 		String^ Description;
-		Object^ ReturnType;
+		Type^ ReturnType;
 		array < Type^ > ^ Arguments;
 	};
 

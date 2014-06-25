@@ -1,7 +1,13 @@
-﻿#include "stdafx.h"
+﻿// Component Extensions for Runtime Platforms
+// http://msdn.microsoft.com/en-us/library/xey702bw.aspx
+// Основы миграции C++/CLI
+// http://msdn.microsoft.com/ru-ru/library/ms235289.aspx
+
+#include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
 #include "mcadincl.h"
 #include "netefi.h"
+#include "test.h"
 
 
 using namespace NetEFI;
@@ -206,6 +212,22 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
         Manager::Items = gcnew List< IFunction^ >();
         Manager::Infos = gcnew List < FunctionInfo^ >();
 
+#ifdef _DEBUG
+
+        array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
+
+        for each ( Type^ type in types ) {
+
+            if ( type->IsClass ) LogInfo( type->ToString() );
+
+            if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+
+            IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
+
+            //Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
+        }
+
+#else
         // Получаем список всех библиотек в текущей папке.
         array< String^ > ^ libs = Directory::GetFiles( Path::GetDirectoryName( AssemblyPath ), gcnew String( "*.dll" ) );
 
@@ -245,7 +267,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                 for each ( Type^ type in types ) {
 
-                    LogInfo( type->ToString() );
+                    if ( type->IsClass ) LogInfo( type->ToString() );
 
                     if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
@@ -266,6 +288,8 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             }
 
         }
+#endif
+        LogInfo( String::Format( L"Items.Count: {0}", Manager::Items->Count ) );
 
         // Теперь регистрируем все функции в Mathcad.
         PBYTE p = pCode;
@@ -287,7 +311,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             fi.lpstrDescription = ( char * ) context.marshal_as<string>( info->Description ).c_str();
             fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
 
-            Type^ type = info->ReturnType->GetType();
+            Type^ type = info->ReturnType;
 
             // How to check an object's type in C++/CLI?
             // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
