@@ -40,8 +40,8 @@ namespace NetEFI {
             info->Name = L"test";
             info->Parameters = L"x";
             info->Description = L"test(x)";
-            info->ReturnType = TComplex::typeid;
-            info->Arguments = gcnew array<Type^> { TComplex::typeid };
+            info->ReturnType = array<TComplex^,2>::typeid;
+            info->Arguments = gcnew array<Type^> { String::typeid };
         }
 
         virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
@@ -49,7 +49,28 @@ namespace NetEFI {
             return info;
         }
 
-        virtual bool NumericEvaluation(array< Object^ > ^, Object ^ %) {
+        virtual bool NumericEvaluation( array< Object^ > ^ args, Object ^ % result ) {
+
+            //TComplex^ arg1 = ( TComplex^ ) args[0];
+
+            //result = gcnew TComplex( arg1->Real + 10, arg1->Imaginary + 10 );
+
+            String^ text = ( String^ ) args[0];
+
+            Manager::LogInfo( text );
+
+            //result = gcnew String( text );
+
+            //Manager::LogInfo( String::Format( "{0}, {1}", arg1->Real, arg1->Imaginary ) );
+
+            array<TComplex^,2>^ m = gcnew array<TComplex^,2>( 2, 2 );
+
+            m[0,0] = gcnew TComplex( 1, 0 );
+            m[0,1] = gcnew TComplex( 2, 0 );
+            m[1,0] = gcnew TComplex( 3, 0 );
+            m[1,1] = gcnew TComplex( 4, 0 );
+
+            result = m;
 
             return true;
         }

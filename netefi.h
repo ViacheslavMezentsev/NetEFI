@@ -110,9 +110,7 @@ namespace NetEFI {
         static bool IsManagedAssembly( String^ );
 
 		// Загрузка пользовательских библиотек.
-		static bool LoadAssemblies( HINSTANCE );
-
-		// Обобщённая функция.
-		static bool NumericEvaluation( int, array < Object^ > ^, Object ^ % );
+		static bool LoadAssemblies( HINSTANCE );		
 	};
+
 }

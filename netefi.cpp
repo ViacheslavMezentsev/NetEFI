@@ -33,15 +33,208 @@ Boolean isinst(U u) {
 }
 
 
+int GetParamsCount( int index ) {
+
+    return Manager::Infos[ index ]->Arguments->GetLength(0);
+}
+
+
+// Обобщённая функция.
+bool UserFunction( int index, PVOID items[] ) {
+
+    MCSTRING * pmcString;
+    COMPLEXSCALAR * pmcScalar;
+    COMPLEXARRAY * pmcArray;
+    Type^ type;
+
+    FunctionInfo^ info = Manager::Infos[index];
+
+    int Count = info->Arguments->GetLength(0);
+
+    array < Object^ > ^ args = gcnew array < Object^ >( Count );
+
+    for ( int n = 0; n < Count; n++ ) {
+
+        type = info->Arguments[n];
+
+        // MCSTRING
+        if ( type->Equals( String::typeid ) ) {
+
+            pmcString = ( MCSTRING * ) items[ n + 1 ];
+
+            args[n] = marshal_as<String^>( pmcString->str );
+
+        // COMPLEXSCALAR
+        } else if ( type->Equals( TComplex::typeid ) ) {
+
+            pmcScalar = ( COMPLEXSCALAR * ) items[ n + 1 ];
+
+            args[n] = gcnew TComplex( pmcScalar->real, pmcScalar->imag );
+
+        // COMPLEXARRAY
+        } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
+
+            pmcArray = ( COMPLEXARRAY * ) items[ n + 1 ];
+            
+            int rows = pmcArray->rows;
+            int cols = pmcArray->cols;
+
+            array<TComplex^,2>^ Matrix = gcnew array<TComplex^,2>( rows, cols );
+            
+            TComplex^ tmp;
+
+            for ( int row = 0; row < rows; row++ ) {
+
+                for ( int col = 0; col < cols; col++ ) {
+
+                    if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag != NULL ) ) 
+                        tmp = gcnew TComplex( pmcArray->hReal[col][row], pmcArray->hImag[col][row] );
+                    
+                    if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag == NULL ) ) 
+                        tmp = gcnew TComplex( pmcArray->hReal[col][row], 0.0 );
+                        
+                    if ( ( pmcArray->hReal == NULL ) && ( pmcArray->hImag != NULL ) ) 
+                        tmp = gcnew TComplex( 0.0, pmcArray->hImag[col][row] );
+
+                    Matrix[ row, col ] = tmp;
+                }
+
+            }
+            
+            args[n] = Matrix;
+        }
+        
+    }
+
+    // Вызываем функцию.
+    Object^ result;
+
+    Manager::Items[ index ]->NumericEvaluation( args, result );
+
+    // Преобразуем результат.
+    type = result->GetType();
+
+    if ( type->Equals( String::typeid ) ) {
+
+        // Выделяем память под структуру.
+        pmcString = ( MCSTRING * ) items[0];
+
+        marshal_context context;
+
+        char * text = ( char * ) context.marshal_as<const char *>( ( String^ ) result );
+
+        // Выделяем память для строки и завершающего нуля.
+        pmcString->str = ( char * ) ::malloc( ::strlen( text ) + 1 );
+
+        ::memset( pmcString->str, 0, ::strlen( text ) + 1 );
+                    
+        // Копируем строку из временной области памяти.
+        ::memcpy( pmcString->str, text, ::strlen( text ) );
+
+
+    } else if ( type->Equals( TComplex::typeid ) ) {
+
+        pmcScalar = ( COMPLEXSCALAR * ) items[0];
+                
+        TComplex^ Number = ( TComplex^ ) result;          
+
+        pmcScalar->real = Number->Real;
+        pmcScalar->imag = Number->Imaginary;
+
+
+    } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
+
+        array<TComplex^,2>^ Matrix = ( array<TComplex^,2>^ ) result;
+
+        // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
+        // ссылка на заполненную структуру COMPLEXARRAY.
+        pmcArray = ( COMPLEXARRAY * ) items[0];
+                
+        int rows = Matrix->GetLength(0);
+        int cols = Matrix->GetLength(1);                
+                
+        bool bReal = false;
+        bool bImag = false;
+                
+        // Проверка наличия действительных частей.           
+        for ( int row = 0; row < rows; row++ ) {
+            for ( int col = 0; col < cols; col++ ) {
+
+                if ( ( ( TComplex^ ) Matrix[ row, col ] )->Real != 0.0 ) {
+                    bReal = true;
+                    break;
+
+                }
+            }
+
+            if ( bReal == true ) break;
+        }                
+                
+        // Проверка наличия мнимых частей.
+        for ( int row = 0; row < rows; row++ ) {
+            for ( int col = 0; col < cols; col++ ) {
+
+                if ( ( ( TComplex^ ) Matrix[ row, col ] )->Imaginary != 0.0 ) {
+                    bImag = true;
+                    break;
+                }
+
+            }
+
+            if ( bImag == true ) break;
+        }                
+                
+        if ( ( ( bReal == true ) && ( bImag == true ) ) || ( ( bReal == false ) && ( bImag == true ) ) )  {
+                    
+            ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, TRUE );
+                    
+            for ( int row = 0; row < rows; row++ ) {
+                for ( int col = 0; col < cols; col++ ) {
+
+                    ( ( COMPLEXARRAY * ) pmcArray )->hReal[col][row] = ( ( TComplex^ ) Matrix[ row, col ] )->Real;
+                    ( ( COMPLEXARRAY * ) pmcArray )->hImag[col][row] = ( ( TComplex^ ) Matrix[ row, col ] )->Imaginary;
+                }
+            }
+        }
+
+        else if ( ( ( bReal == true ) && ( bImag == false ) ) || ( ( bReal == false ) && ( bImag == false ) ) ) {
+                    
+            ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, FALSE );
+                    
+            for ( int row = 0; row < rows; row++ ) {
+                for ( int col = 0; col < cols; col++ ) {
+
+                    ( ( COMPLEXARRAY * ) pmcArray )->hReal[col][row] = ( ( TComplex^ ) Matrix[ row, col ] )->Real;
+                }
+            }
+        }
+
+    }
+
+    return true;
+}
+
+
 LRESULT GlobalFunction( void * out, ... ) {
 
-    LogInfo( "GlobalFunction()" );
+    int Count = ::GetParamsCount( id ) + 1;
 
-    LPCOMPLEXSCALAR v = ( LPCOMPLEXSCALAR ) out;
+    va_list marker;
 
-    v->real = 0;
-    //out->imag = in->imag;
-    v->imag = id;
+    va_start( marker, out );
+
+    PVOID * p = new PVOID[ Count ];
+
+    p[0] = out;
+
+    for ( int n = 1; n < Count; n++ ) {
+
+        p[n] = va_arg( marker, PVOID );
+    }
+
+    va_end( marker );
+
+    ::UserFunction( id, p );
 
     return 0;
 }
@@ -49,19 +242,19 @@ LRESULT GlobalFunction( void * out, ... ) {
 
 void LogInfo( string text ) {
 
-    Manager::LogInfo( marshal_as<String^, string>( text ) );
+    Manager::LogInfo( marshal_as<String^>( text ) );
 }
 
 
 void LogError( string text ) {
 
-    Manager::LogError( marshal_as<String^, string>( text ) );
+    Manager::LogError( marshal_as<String^>( text ) );
 }
 
 
 void Manager::LogInfo( String^ Text ) {
 
-    File::AppendAllText( LogFile, ( gcnew String( "" ) )->Format( "{0} {1} [INFO ] {2}{3}", 
+    File::AppendAllText( LogFile, String::Format( "{0} {1} [INFO ] {2}{3}", 
         DateTime::Now.ToShortDateString(), DateTime::Now.ToLongTimeString(), 
         Text, Environment::NewLine ), Encoding::UTF8 );
 }
@@ -69,7 +262,7 @@ void Manager::LogInfo( String^ Text ) {
 
 void Manager::LogError( String^ Text ) {
 
-    File::AppendAllText( LogFile, ( gcnew String( "" ) )->Format( "{0} {1} [ERROR] {2}{3}", 
+    File::AppendAllText( LogFile, String::Format( "{0} {1} [ERROR] {2}{3}", 
         DateTime::Now.ToShortDateString(), DateTime::Now.ToLongTimeString(), 
         Text, Environment::NewLine ), Encoding::UTF8 );
 }
@@ -238,53 +431,44 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             
                 if ( !IsManagedAssembly( path ) || path->Equals( AssemblyPath ) ) continue;
 
-                LogInfo( path );
+                // LoadFile vs. LoadFrom
+                // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
+                Assembly^ assembly = Assembly::LoadFrom( path );
 
-                array<Type^>^ types;
+                // Assembly и GetType().
+                // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
+                // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
+                for each ( Type^ type in assembly->GetTypes() ) {
 
-                try {
-                                     
-                    // LoadFile vs. LoadFrom
-                    // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
-                    Assembly^ assembly = Assembly::GetExecutingAssembly()->LoadFile( path );
+                    //if ( !type->IsPublic || type->IsAbstract || !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    LogInfo( assembly->ToString() );
+                    if ( !type->IsPublic || type->IsAbstract ) continue;
 
-                    types = assembly->GetTypes();
+                    Type^ typeInterface = type->GetInterface( "NetEFI.IFunction", true );
 
-                    LogInfo( types->ToString() );
+                    if ( typeInterface != nullptr ) {
 
-                } catch ( System::Exception^ ex ) {
+                        Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
+                    }
 
-                    LogError( ex->Message );
-                    continue;
-                
-                } catch ( ... ) {
-                    
-                    ::LogError( "Error 1" );
-                    continue;    
-                }
-
-                for each ( Type^ type in types ) {
-
-                    if ( type->IsClass ) LogInfo( type->ToString() );
-
-                    if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
-
-                    Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
                 }
 
                 LogInfo( String::Format( " [LoadLibraries] {0} loaded.", path ) );
 
-            } catch ( System::Exception^ ex ) {
+            } catch ( ReflectionTypeLoadException^ ex ) {
+
+                for each ( Exception^ e in ex->LoaderExceptions ) {
+                
+                    LogError( e->Message );
+                }
+                
+                continue;
+
+            } catch ( Exception^ ex ) {
 
                 LogError( ex->Message );
                 continue;
 
-            } catch ( ... ) {
-                    
-                ::LogError( "Error 2" );
-                continue;    
             }
 
         }
@@ -330,7 +514,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                 fi.returnType = COMPLEX_SCALAR;
 
-            } else if ( type->Equals( array<TComplex,2>::typeid ) ) {
+            } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
 
                 fi.returnType = COMPLEX_ARRAY;            
             
@@ -350,7 +534,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                     fi.argType[m] = COMPLEX_SCALAR;
 
-                } else if ( type->Equals( array<TComplex,2>::typeid ) ) {
+                } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
 
                     fi.argType[m] = COMPLEX_ARRAY;            
             
@@ -387,12 +571,6 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
         ::LogError( "Error 3" );
         return false;    
     }
-
-    return true;
-}
-
-
-bool Manager::NumericEvaluation( int n, array < Object^ > ^ args, Object ^ % result ) {
 
     return true;
 }
