@@ -3,7 +3,6 @@
 using namespace System;
 using namespace System::IO;
 using namespace System::Text;
-using namespace System::Numerics;
 using namespace System::Reflection;
 using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
@@ -19,6 +18,25 @@ LRESULT GlobalFunction( void * out, ... );
 
 
 namespace NetEFI {
+
+	public ref class TComplex {
+
+	private:
+		double _imaginary;
+		double _real;
+
+	public:
+		property double Imaginary { double get() { return _imaginary; } }
+		property double Real { double get() { return _real; } }
+
+	public:
+		TComplex( double real, double imaginary ) {
+
+			_real = real;
+			_imaginary = imaginary;
+		}
+
+	};
 
 	public ref class FunctionInfo {
 

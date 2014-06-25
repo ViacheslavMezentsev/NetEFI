@@ -6,8 +6,8 @@
 #include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
 #include "mcadincl.h"
-#include "netefi.h"
 #include "test.h"
+#include "netefi.h"
 
 
 using namespace NetEFI;
@@ -224,7 +224,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
             IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
 
-            //Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
+            Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
         }
 
 #else
@@ -303,12 +303,19 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             LogInfo( gcnew String( "Manager::Infos->Add( info )" ) );
 
             FUNCTIONINFO fi;
-
-            marshal_context context;
                 
-            fi.lpstrName = ( char * ) context.marshal_as<string>( info->Name ).c_str();
-            fi.lpstrParameters = ( char * ) context.marshal_as<string>( info->Parameters ).c_str();
-            fi.lpstrDescription = ( char * ) context.marshal_as<string>( info->Description ).c_str();
+			marshal_context context;
+
+			// For VS2008.
+			String^ s = info->Name;
+            fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
+
+			s = info->Parameters;
+            fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
+
+			s = info->Description;
+            fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
+
             fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
 
             Type^ type = info->ReturnType;
@@ -319,11 +326,11 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                 fi.returnType = STRING;
 
-            } else if ( type->Equals( Complex::typeid ) ) {
+            } else if ( type->Equals( TComplex::typeid ) ) {
 
                 fi.returnType = COMPLEX_SCALAR;
 
-            } else if ( type->Equals( array<Complex,2>::typeid ) ) {
+            } else if ( type->Equals( array<TComplex,2>::typeid ) ) {
 
                 fi.returnType = COMPLEX_ARRAY;            
             
@@ -339,11 +346,11 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                     fi.argType[m] = STRING;
 
-                } else if ( type->Equals( Complex::typeid ) ) {
+                } else if ( type->Equals( TComplex::typeid ) ) {
 
                     fi.argType[m] = COMPLEX_SCALAR;
 
-                } else if ( type->Equals( array<Complex,2>::typeid ) ) {
+                } else if ( type->Equals( array<TComplex,2>::typeid ) ) {
 
                     fi.argType[m] = COMPLEX_ARRAY;            
             

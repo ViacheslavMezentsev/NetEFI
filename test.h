@@ -5,7 +5,6 @@
 using namespace System;
 using namespace System::IO;
 using namespace System::Text;
-using namespace System::Numerics;
 using namespace System::Reflection;
 using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
@@ -36,11 +35,13 @@ namespace NetEFI {
 
         test() {
 
+			info = gcnew FunctionInfo();
+
             info->Name = L"test";
             info->Parameters = L"x";
             info->Description = L"test(x)";
-            info->ReturnType = Complex::typeid;
-            info->Arguments = gcnew array<Type^> { Complex::typeid };
+            info->ReturnType = TComplex::typeid;
+            info->Arguments = gcnew array<Type^> { TComplex::typeid };
         }
 
         virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
