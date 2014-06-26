@@ -3,14 +3,14 @@
 
 using namespace NetEFI;
 
-bool LoadAssemblies( HINSTANCE );
+bool LoadAssemblies();
 
 
-bool LoadAssemblies( HINSTANCE hInstance ) {
+bool LoadAssemblies() {
 
     if ( !Manager::Initialize() ) return false;
 
-    return Manager::LoadAssemblies( hInstance );
+    return Manager::LoadAssemblies();
 }
 
 
@@ -23,7 +23,7 @@ BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved
         // DLL проецируется на адресное пространство процесса
         case DLL_PROCESS_ATTACH: { 
 
-            try { LoadAssemblies( hinstDLL ); } catch (...) {}
+            try { LoadAssemblies(); } catch (...) {}
 
             break;
         }

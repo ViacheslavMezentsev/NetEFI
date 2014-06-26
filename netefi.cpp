@@ -131,7 +131,7 @@ bool UserFunction( int index, PVOID items[] ) {
         char * text = ( char * ) context.marshal_as<const char *>( ( String^ ) result );
 
         // Выделяем память для строки и завершающего нуля.
-        pmcString->str = ( char * ) ::malloc( ::strlen( text ) + 1 );
+        pmcString->str = ( char * ) ::MathcadAllocate( ::strlen( text ) + 1 );
 
         ::memset( pmcString->str, 0, ::strlen( text ) + 1 );
                     
@@ -440,7 +440,7 @@ bool Manager::IsManagedAssembly( String^ fileName ) {
 
 
 // Загрузка пользовательских библиотек.
-bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
+bool Manager::LoadAssemblies() {
 
     try {
 
@@ -454,9 +454,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
         for each ( Type^ type in types ) {
 
-            //if ( type->IsClass ) LogInfo( type->ToString() );
-
-            if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+            if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
             IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
 
@@ -483,17 +481,9 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
                 for each ( Type^ type in assembly->GetTypes() ) {
 
-                    //if ( !type->IsPublic || type->IsAbstract || !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    if ( !type->IsPublic || type->IsAbstract ) continue;
-
-                    Type^ typeInterface = type->GetInterface( "NetEFI.IFunction", true );
-
-                    if ( typeInterface != nullptr ) {
-
-                        Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
-                    }
-
+                    Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
                 }                
 
             } catch ( Exception^ ex ) {
@@ -586,7 +576,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
             }            
 
-            ::CreateUserFunction( hInstance, & fi );  
+            ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi );  
 
             // Пересылка константы (номера функции) в глобальную переменную id.
             * p++ = 0xB8; // mov eax, imm32

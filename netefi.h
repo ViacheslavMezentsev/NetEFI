@@ -106,17 +106,20 @@ namespace NetEFI {
 
 	public:
         
+        // Настройка менеджера.
         static bool Initialize();
 
-		// Ведение журнала сообщений.
+		// Вывод информационных сообщений.
 		static void LogInfo( String^ );
 
+        // Вывод сообщений об ошибках.
 		static void LogError( String^ );
 
+        // Проверка типа библиотеки.
         static bool IsManagedAssembly( String^ );
 
-		// Загрузка пользовательских библиотек.
-		static bool LoadAssemblies( HINSTANCE );		
+		// Загрузка пользовательских сборок.
+		static bool LoadAssemblies();		
 	};
 
 }
