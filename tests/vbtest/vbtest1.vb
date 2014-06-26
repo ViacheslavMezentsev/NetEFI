@@ -28,11 +28,20 @@ Public Class vbtest1
 
     Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object) As Boolean Implements IFunction.NumericEvaluation
 
-        Dim arg0 = DirectCast(args(0), TComplex)
+        Try
 
-        result = New TComplex(2 * arg0.Real, 2 * arg0.Imaginary)
+            Dim arg0 = DirectCast(args(0), TComplex)
+
+            result = New TComplex(2 * arg0.Real, 2 * arg0.Imaginary)
+
+        Catch ex As Exception
+
+            Return False
+
+        End Try
 
         Return True
+
     End Function
 
 End Class

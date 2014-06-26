@@ -29,19 +29,28 @@ Public Class vbtest2
 
     Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object) As Boolean Implements IFunction.NumericEvaluation
 
+        Try
 
-        Dim d = DirectCast(args(0), [String])
-        Dim v = DirectCast(args(1), TComplex(,))
+            Dim d = DirectCast(args(0), [String])
+            Dim v = DirectCast(args(1), TComplex(,))
 
-        Dim len As Integer = v.GetLength(0)
+            Dim len As Integer = v.GetLength(0)
 
-        Dim list = New List(Of String)()
+            Dim list = New List(Of String)()
 
-        For n As Integer = 0 To len - 1
-            list.Add([String].Format("{0} + {1} * i", v(n, 0).Real, v(n, 0).Imaginary))
-        Next
+            For n As Integer = 0 To len - 1
+                list.Add([String].Format("{0} + {1} * i", v(n, 0).Real, v(n, 0).Imaginary))
+            Next
 
-        result = [String].Join(d, list.ToArray())
+            result = [String].Join(d, list.ToArray())
+
+        Catch ex As Exception
+
+            Return False
+
+        End Try
+
+        Return True
 
     End Function
 

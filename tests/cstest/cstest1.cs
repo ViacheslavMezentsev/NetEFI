@@ -3,42 +3,36 @@ using System.Reflection;
 using NetEFI;
 
 
-namespace Functions
-{
+namespace Functions {
 
-    public class cstest1 : IFunction
-    {
+    public class cstest1: IFunction {
 
         private FunctionInfo _info;
 
-        public FunctionInfo Info
-        {
+        public FunctionInfo Info {
 
             get { return _info; }
         }
 
-        public cstest1()
-        {
+        public cstest1() {
 
             _info = new FunctionInfo(
 
                 "cstest1", "x", "return complex scalar 2 * x",
-                new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath,
-                typeof(TComplex),
-                new[] { typeof(TComplex) }
+                new Uri( Assembly.GetExecutingAssembly().CodeBase ).LocalPath,
+                typeof( TComplex ),
+                new[] { typeof( TComplex ) }
                 );
         }
 
-        public FunctionInfo GetFunctionInfo(string lang)
-        {
+        public FunctionInfo GetFunctionInfo( string lang ) {
 
             return Info;
         }
 
-        public bool NumericEvaluation(object[] args, out object result)
-        {
+        public bool NumericEvaluation( object[] args, out object result ) {
 
-            var arg0 = (TComplex)args[0];
+            var arg0 = ( TComplex ) args[0];
 
             result = new TComplex( 2 * arg0.Real, 2 * arg0.Imaginary );
 

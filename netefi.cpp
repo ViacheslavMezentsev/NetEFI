@@ -37,21 +37,16 @@ Boolean isinst(U u) {
 }
 
 
-int GetParamsCount( int index ) {
-
-    return Manager::Infos[ index ]->ArgTypes->GetLength(0);
-}
-
 
 // Обобщённая функция.
-bool UserFunction( int index, PVOID items[] ) {
+HRESULT UserFunction( PVOID items[] ) {
 
     MCSTRING * pmcString;
     COMPLEXSCALAR * pmcScalar;
     COMPLEXARRAY * pmcArray;
     Type^ type;
 
-    FunctionInfo^ info = Manager::Infos[index];
+    FunctionInfo^ info = Manager::Infos[ id ];
 
     int Count = info->ArgTypes->GetLength(0);
 
@@ -114,7 +109,7 @@ bool UserFunction( int index, PVOID items[] ) {
     // Вызываем функцию.
     Object^ result;
 
-    Manager::Items[ index ]->NumericEvaluation( args, result );
+    if ( !Manager::Items[ id ]->NumericEvaluation( args, result ) ) return E_FAIL;
 
     // Преобразуем результат.
     type = result->GetType();
@@ -218,36 +213,19 @@ bool UserFunction( int index, PVOID items[] ) {
 
     }
 
-    return true;
+    return S_OK;
 }
+
 
 #pragma unmanaged
 
-LRESULT GlobalFunction( void * out, ... ) {
+LRESULT CallbackFunction( void * out, ... ) {
 
-    int Count = ::GetParamsCount( id ) + 1;
-
-    va_list marker;
-
-    va_start( marker, out );
-
-    PVOID * p = new PVOID[ Count ];
-
-    p[0] = out;
-
-    for ( int n = 1; n < Count; n++ ) {
-
-        p[n] = va_arg( marker, PVOID );
-    }
-
-    va_end( marker );
-
-    ::UserFunction( id, p );
-
-    return 0;
+    return ::UserFunction( & out );
 }
 
 #pragma managed
+
 
 void LogInfo( string text ) {
 
@@ -589,7 +567,7 @@ bool Manager::LoadAssemblies() {
 
             // jmp to GlobalFunction(). 
             * p++ = 0xE9;
-            ( UINT & ) p[0] = ( PBYTE ) GlobalFunction - 4 - p;
+            ( UINT & ) p[0] = ( PBYTE ) CallbackFunction - 4 - p;
             p += sizeof( PBYTE );
         }
 
