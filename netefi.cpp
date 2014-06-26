@@ -13,6 +13,10 @@
 using namespace NetEFI;
 
 
+#define MAX_FUNCTIONS_COUNT 10000UL
+#define DYNAMIC_BLOCK_SIZE 15
+
+
 static int id;
 static PBYTE pCode;
 
@@ -58,6 +62,7 @@ bool UserFunction( int index, PVOID items[] ) {
         type = info->Arguments[n];
 
         // MCSTRING
+        // TODO: Преобразовывать ansi в unicode.
         if ( type->Equals( String::typeid ) ) {
 
             pmcString = ( MCSTRING * ) items[ n + 1 ];
@@ -114,6 +119,8 @@ bool UserFunction( int index, PVOID items[] ) {
     // Преобразуем результат.
     type = result->GetType();
 
+    // MCSTRING
+    // TODO: Преобразовывать unicode в ansi.
     if ( type->Equals( String::typeid ) ) {
 
         // Выделяем память под структуру.
@@ -131,7 +138,7 @@ bool UserFunction( int index, PVOID items[] ) {
         // Копируем строку из временной области памяти.
         ::memcpy( pmcString->str, text, ::strlen( text ) );
 
-
+    // COMPLEXSCALAR
     } else if ( type->Equals( TComplex::typeid ) ) {
 
         pmcScalar = ( COMPLEXSCALAR * ) items[0];
@@ -141,7 +148,7 @@ bool UserFunction( int index, PVOID items[] ) {
         pmcScalar->real = Number->Real;
         pmcScalar->imag = Number->Imaginary;
 
-
+    // COMPLEXARRAY
     } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
 
         array<TComplex^,2>^ Matrix = ( array<TComplex^,2>^ ) result;
@@ -276,7 +283,9 @@ bool Manager::Initialize() {
 
     // TODO: Рассчитать необходимый размер динамической памяти в зависимости от
     // максимального числа поддерживаемых функций.
-    pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, 1 << 16, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
+    size_t Size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE; 
+
+    pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
 
     if ( pCode == NULL ) {
         
@@ -484,6 +493,8 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
         for ( int n = 0; n < Manager::Items->Count; n++ ) {
             
+            if ( n >= MAX_FUNCTIONS_COUNT ) break;
+
             FunctionInfo^ info = Manager::Items[n]->GetFunctionInfo( "RUS" );
             
             Manager::Infos->Add( info );                  

@@ -19,6 +19,18 @@ LRESULT GlobalFunction( void * out, ... );
 
 namespace NetEFI {
 
+	public ref class FunctionInfo {
+
+	public:
+
+		String^ Name;
+		String^ Parameters; 
+		String^ Description;
+		Type^ ReturnType;
+		array < Type^ > ^ Arguments;
+	};
+
+
 	public interface class IFunction {
 
 	public:
@@ -47,18 +59,6 @@ namespace NetEFI {
 			_imaginary = imaginary;
 		}
 
-	};
-
-
-	public ref class FunctionInfo {
-
-	public:
-
-		String^ Name;
-		String^ Parameters; 
-		String^ Description;
-		Type^ ReturnType;
-		array < Type^ > ^ Arguments;
 	};
 
 
