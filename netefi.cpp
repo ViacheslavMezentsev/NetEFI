@@ -39,7 +39,7 @@ Boolean isinst(U u) {
 
 int GetParamsCount( int index ) {
 
-    return Manager::Infos[ index ]->Arguments->GetLength(0);
+    return Manager::Infos[ index ]->ArgTypes->GetLength(0);
 }
 
 
@@ -53,13 +53,13 @@ bool UserFunction( int index, PVOID items[] ) {
 
     FunctionInfo^ info = Manager::Infos[index];
 
-    int Count = info->Arguments->GetLength(0);
+    int Count = info->ArgTypes->GetLength(0);
 
     array < Object^ > ^ args = gcnew array < Object^ >( Count );
 
     for ( int n = 0; n < Count; n++ ) {
 
-        type = info->Arguments[n];
+        type = info->ArgTypes[n];
 
         // MCSTRING
         // TODO: Преобразовывать ansi в unicode.
@@ -287,6 +287,7 @@ bool Manager::Initialize() {
 
     pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
 
+    // TODO: Обработка кодов ошибок.
     if ( pCode == NULL ) {
         
         LogInfo( "VirtualAllocEx() failed." );
@@ -303,7 +304,8 @@ bool Manager::Initialize() {
         return false;
     }
 
-    HMODULE hLib = ::LoadLibraryW( marshal_as<wstring, String^>( path ).c_str() ); 
+    marshal_context context;
+    HMODULE hLib = ::LoadLibraryW( context.marshal_as<LPCWSTR>( path ) ); 
 
     if ( hLib == NULL ) {
         
@@ -535,11 +537,11 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             
             } else continue;
             
-            fi.nArgs = info->Arguments->GetLength(0);
+            fi.nArgs = info->ArgTypes->GetLength(0);
             
             for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
 
-                type = info->Arguments[m];
+                type = info->ArgTypes[m];
 
                 if ( type->Equals( String::typeid ) ) {
 

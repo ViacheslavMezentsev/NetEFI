@@ -27,7 +27,17 @@ namespace NetEFI {
 		String^ Parameters; 
 		String^ Description;
 		Type^ ReturnType;
-		array < Type^ > ^ Arguments;
+		array < Type^ > ^ ArgTypes;
+
+        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes ){
+
+            Name = name;
+            Parameters = params;
+            Description = descr;
+            ReturnType = returnType;
+            ArgTypes = argTypes;
+        }
+
 	};
 
 

@@ -35,13 +35,12 @@ namespace NetEFI {
 
         test() {
 
-			info = gcnew FunctionInfo();
-
-            info->Name = L"test";
-            info->Parameters = L"x";
-            info->Description = L"test(x)";
-            info->ReturnType = array<TComplex^,2>::typeid;
-            info->Arguments = gcnew array<Type^> { String::typeid };
+			info = gcnew FunctionInfo(
+                
+                "test", "x", "test(x)", 
+                array<TComplex^,2>::typeid,
+                gcnew array<Type^> { String::typeid }
+            );
         }
 
         virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
