@@ -28,16 +28,7 @@ PMATHCAD_ARRAY_ALLOCATE MathcadArrayAllocate;
 PMATHCAD_ARRAY_FREE MathcadArrayFree; 
 PIS_USER_INTERRUPTED isUserInterrupted;
 
-
-// Эмуляция is из C#.
-template < class T, class U > 
-Boolean isinst(U u) {
-   
-    return dynamic_cast< T >(u) != nullptr;
-}
-
-
-
+                  
 // Обобщённая функция.
 HRESULT UserFunction( PVOID items[] ) {
 
@@ -107,6 +98,7 @@ HRESULT UserFunction( PVOID items[] ) {
     }
 
     // Вызываем функцию.
+    // TODO: Сделать вызов в отдельном потоке.
     Object^ result;
 
     if ( !Manager::Items[ id ]->NumericEvaluation( args, result ) ) return E_FAIL;
@@ -227,15 +219,15 @@ LRESULT CallbackFunction( void * out, ... ) {
 #pragma managed
 
 
-void LogInfo( string text ) {
+void Manager::LogInfo( string text ) {
 
-    Manager::LogInfo( marshal_as<String^>( text ) );
+    LogInfo( marshal_as<String^>( text ) );
 }
 
 
-void LogError( string text ) {
+void Manager::LogError( string text ) {
 
-    Manager::LogError( marshal_as<String^>( text ) );
+    LogError( marshal_as<String^>( text ) );
 }
 
 
@@ -269,7 +261,6 @@ Assembly^ OnAssemblyResolve(Object^ sender, ResolveEventArgs^ args) {
 }
 
 
-
 void PrepareManagedCode() {
 
     // Set up our resolver for assembly loading
@@ -285,7 +276,7 @@ bool Manager::Initialize() {
     // http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
     PrepareManagedCode();
 
-    try { File::Delete( Manager::LogFile ); } catch (...) {}
+    try { File::Delete( LogFile ); } catch (...) {}
 
     // TODO: Рассчитать необходимый размер динамической памяти в зависимости от
     // максимального числа поддерживаемых функций.
@@ -300,7 +291,7 @@ bool Manager::Initialize() {
         return false;
     }
 
-    String^ path = Path::GetDirectoryName( Manager::AssemblyPath );
+    String^ path = Path::GetDirectoryName( AssemblyPath );
         
     path = Path::Combine( path, gcnew String( L"..\\mcaduser.dll" ) );
 
@@ -423,7 +414,7 @@ bool Manager::LoadAssemblies() {
     try {
 
         // Списки функций и их карточек.
-        Manager::Items = gcnew List< IFunction^ >();
+        Manager::Items = gcnew List < IFunction^ >();
         Manager::Infos = gcnew List < FunctionInfo^ >();
 
 #ifdef _DEBUG
@@ -478,28 +469,16 @@ bool Manager::LoadAssemblies() {
         for ( int n = 0; n < Manager::Items->Count; n++ ) {
             
             if ( n >= MAX_FUNCTIONS_COUNT ) break;
-
-            FunctionInfo^ info = Manager::Items[n]->GetFunctionInfo( "RUS" );
+            
+            String^ lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
+            FunctionInfo^ info = Manager::Items[n]->GetFunctionInfo( lang );
             
             Manager::Infos->Add( info ); 
-
-            List< String^ >^ params = gcnew List< String^ >();
-                
-            for each ( Type^ type in info->ArgTypes ) params->Add( type->ToString() );
-
-            String^ args = String::Join( gcnew String( "," ), params->ToArray() );
-
-            String^ text = ( info->Parameters->Length > 0 ) 
-                ? String::Format("[{0}] [ {1} ] {2}", Path::GetFileName( info->AssemblyPath ), info->Parameters, info->Description ) 
-                : String::Format("[ {0} ] {1}", args, info->Description );
-
-            LogInfo( String::Format( "{0} - {1}", info->Name, text ) );
 
             FUNCTIONINFO fi;
                 
 			marshal_context context;
 
-			// For VS2008.
 			String^ s = info->Name;
             fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
 
@@ -554,7 +533,21 @@ bool Manager::LoadAssemblies() {
 
             }            
 
-            ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi );  
+            void * res = ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi );  
+
+            if ( res == NULL ) continue;
+
+            List< String^ >^ params = gcnew List< String^ >();
+                
+            for each ( Type^ type in info->ArgTypes ) params->Add( type->ToString() );
+
+            String^ args = String::Join( gcnew String( "," ), params->ToArray() );
+
+            String^ text = ( info->Parameters->Length > 0 ) 
+                ? String::Format( "[ {0} ] {1}", info->Parameters, info->Description ) 
+                : String::Format( "[ {0} ] {1}", args, info->Description );
+
+            LogInfo( String::Format( "[{0}] [{1}] {2} - {3}", n, Path::GetFileName( info->AssemblyPath ), info->Name, text ) );
 
             // Пересылка константы (номера функции) в глобальную переменную id.
             * p++ = 0xB8; // mov eax, imm32
@@ -565,9 +558,9 @@ bool Manager::LoadAssemblies() {
             ( int * & ) p[0] = & id; 
             p += sizeof( int * );         
 
-            // jmp to GlobalFunction(). 
+            // jmp to CallbackFunction. 
             * p++ = 0xE9;
-            ( UINT & ) p[0] = ( PBYTE ) CallbackFunction - 4 - p;
+            ( UINT & ) p[0] = ( PBYTE ) ::CallbackFunction - 4 - p;
             p += sizeof( PBYTE );
         }
 

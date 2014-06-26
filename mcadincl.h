@@ -128,6 +128,8 @@ typedef struct tagFUNCTIONINFO {
 
 // CreateUserFunction is called when the DLL is attaching to the address space of
 // the current process in order to register the user function with Mathcad.
+// The return value is a non-NULL handle if the registration is successful. 
+// Otherwise, it is NULL.
 //const void * CreateUserFunction( HINSTANCE, FUNCTIONINFO * );
 typedef void * ( * PCREATE_USER_FUNCTION ) ( HINSTANCE, FUNCTIONINFO * );   
 

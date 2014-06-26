@@ -3,8 +3,6 @@
 
 using namespace NetEFI;
 
-bool LoadAssemblies();
-
 
 bool LoadAssemblies() {
 

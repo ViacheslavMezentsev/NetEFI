@@ -109,8 +109,12 @@ namespace NetEFI {
 		// Вывод информационных сообщений.
 		static void LogInfo( String^ );
 
+        static void LogInfo( string );
+
         // Вывод сообщений об ошибках.
 		static void LogError( String^ );
+
+        static void LogError( string );
 
         // Проверка типа библиотеки.
         static bool IsManagedAssembly( String^ );

@@ -56,6 +56,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="cstest.cs" />
     <Compile Include="cstest1.cs" />
     <Compile Include="cstest2.cs" />
     <Compile Include="cstest3.cs" />
