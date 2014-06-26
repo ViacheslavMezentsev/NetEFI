@@ -214,6 +214,7 @@ bool UserFunction( int index, PVOID items[] ) {
     return true;
 }
 
+#pragma unmanaged
 
 LRESULT GlobalFunction( void * out, ... ) {
 
@@ -239,6 +240,7 @@ LRESULT GlobalFunction( void * out, ... ) {
     return 0;
 }
 
+#pragma managed
 
 void LogInfo( string text ) {
 
@@ -272,6 +274,8 @@ bool Manager::Initialize() {
 
     try { File::Delete( Manager::LogFile ); } catch (...) {}
 
+    // TODO: Рассчитать необходимый размер динамической памяти в зависимости от
+    // максимального числа поддерживаемых функций.
     pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, 1 << 16, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
 
     if ( pCode == NULL ) {
@@ -411,7 +415,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
         for each ( Type^ type in types ) {
 
-            if ( type->IsClass ) LogInfo( type->ToString() );
+            //if ( type->IsClass ) LogInfo( type->ToString() );
 
             if ( !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
@@ -473,7 +477,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
         }
 #endif
-        LogInfo( String::Format( L"Items.Count: {0}", Manager::Items->Count ) );
+        //LogInfo( String::Format( L"Items.Count: {0}", Manager::Items->Count ) );
 
         // Теперь регистрируем все функции в Mathcad.
         PBYTE p = pCode;
@@ -484,7 +488,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             
             Manager::Infos->Add( info );                  
 
-            LogInfo( gcnew String( "Manager::Infos->Add( info )" ) );
+            //LogInfo( gcnew String( "Manager::Infos->Add( info )" ) );
 
             FUNCTIONINFO fi;
                 
@@ -545,7 +549,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
             ::CreateUserFunction( hInstance, & fi );  
 
-            // Пересылки константы (номера функции) в глобальную переменную id.
+            // Пересылка константы (номера функции) в глобальную переменную id.
             * p++ = 0xB8; // mov eax, imm32
             p[0] = n;
             p += sizeof( int );
@@ -565,11 +569,6 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
         LogError( ex->Message );
 
         return false;
-
-    } catch ( ... ) {
-                    
-        ::LogError( "Error 3" );
-        return false;    
     }
 
     return true;

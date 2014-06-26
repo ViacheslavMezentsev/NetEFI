@@ -19,6 +19,17 @@ LRESULT GlobalFunction( void * out, ... );
 
 namespace NetEFI {
 
+	public interface class IFunction {
+
+	public:
+
+		property FunctionInfo^ Info { FunctionInfo^ get(); }
+
+		FunctionInfo^ GetFunctionInfo( String^ lang );
+		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ % );
+	};
+
+
 	public ref class TComplex {
 
 	private:
@@ -38,6 +49,7 @@ namespace NetEFI {
 
 	};
 
+
 	public ref class FunctionInfo {
 
 	public:
@@ -47,16 +59,6 @@ namespace NetEFI {
 		String^ Description;
 		Type^ ReturnType;
 		array < Type^ > ^ Arguments;
-	};
-
-	public interface class IFunction {
-
-	public:
-
-		property FunctionInfo^ Info { FunctionInfo^ get(); }
-
-		FunctionInfo^ GetFunctionInfo( String^ lang );
-		bool NumericEvaluation( array < Object^ > ^, Object ^ % );
 	};
 
 
