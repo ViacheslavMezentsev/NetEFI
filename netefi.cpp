@@ -277,7 +277,35 @@ void Manager::LogError( String^ Text ) {
 }
 
 
+/// <summary>
+/// This handler is called only when the CLR tries to bind to the assembly and fails
+/// </summary>
+/// <param name="sender">Event originator</param>
+/// <param name="args">Event data</param>
+/// <returns>The loaded assembly</returns>
+Assembly^ OnAssemblyResolve(Object^ sender, ResolveEventArgs^ args) {
+ 
+    Manager::LogInfo( String::Format( "OnAssemblyResolve {0}", args->Name ) );
+    
+    return Assembly::GetExecutingAssembly();
+}
+
+
+
+void PrepareManagedCode() {
+
+    // Set up our resolver for assembly loading
+    AppDomain^ currentDomain = AppDomain::CurrentDomain;
+
+    currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
+}
+
+
 bool Manager::Initialize() {
+
+    // Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
+    // http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
+    PrepareManagedCode();
 
     try { File::Delete( Manager::LogFile ); } catch (...) {}
 
@@ -448,7 +476,7 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
                 // LoadFile vs. LoadFrom
                 // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
-                Assembly^ assembly = Assembly::LoadFrom( path );
+                Assembly^ assembly = Assembly::LoadFile( path );
 
                 // Assembly и GetType().
                 // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
@@ -466,30 +494,16 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
                         Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
                     }
 
-                }
-
-                LogInfo( String::Format( " [LoadLibraries] {0} loaded.", path ) );
-
-            } catch ( ReflectionTypeLoadException^ ex ) {
-
-                for each ( Exception^ e in ex->LoaderExceptions ) {
-                
-                    LogError( e->Message );
-                }
-                
-                continue;
+                }                
 
             } catch ( Exception^ ex ) {
 
                 LogError( ex->Message );
                 continue;
-
             }
 
         }
 #endif
-        //LogInfo( String::Format( L"Items.Count: {0}", Manager::Items->Count ) );
-
         // Теперь регистрируем все функции в Mathcad.
         PBYTE p = pCode;
 
@@ -499,9 +513,19 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
 
             FunctionInfo^ info = Manager::Items[n]->GetFunctionInfo( "RUS" );
             
-            Manager::Infos->Add( info );                  
+            Manager::Infos->Add( info ); 
 
-            //LogInfo( gcnew String( "Manager::Infos->Add( info )" ) );
+            List< String^ >^ params = gcnew List< String^ >();
+                
+            for each ( Type^ type in info->ArgTypes ) params->Add( type->ToString() );
+
+            String^ args = String::Join( gcnew String( "," ), params->ToArray() );
+
+            String^ text = ( info->Parameters->Length > 0 ) 
+                ? String::Format("[{0}] [ {1} ] {2}", Path::GetFileName( info->AssemblyPath ), info->Parameters, info->Description ) 
+                : String::Format("[ {0} ] {1}", args, info->Description );
+
+            LogInfo( String::Format( "{0} - {1}", info->Name, text ) );
 
             FUNCTIONINFO fi;
                 
@@ -538,6 +562,8 @@ bool Manager::LoadAssemblies( HINSTANCE hInstance ) {
             } else continue;
             
             fi.nArgs = info->ArgTypes->GetLength(0);
+
+            if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
             
             for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
 

@@ -26,14 +26,16 @@ namespace NetEFI {
 		String^ Name;
 		String^ Parameters; 
 		String^ Description;
+        String^ AssemblyPath;
 		Type^ ReturnType;
 		array < Type^ > ^ ArgTypes;
 
-        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes ){
+        FunctionInfo( String^ name, String^ params, String^ descr, String^ path, Type^ returnType, array < Type^ > ^ argTypes ){
 
             Name = name;
             Parameters = params;
             Description = descr;
+            AssemblyPath = path;
             ReturnType = returnType;
             ArgTypes = argTypes;
         }
@@ -101,14 +103,6 @@ namespace NetEFI {
 			}; 
 
 		};
-
-        static property Assembly^ NetEFIAssembly {
-
-            Assembly^ get() {
-                
-                return Assembly::GetExecutingAssembly();
-            }
-        }
 
 	public:
         
