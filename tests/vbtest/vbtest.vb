@@ -17,7 +17,6 @@ Public Class vbtest
     Public Sub New()
 
         _info = New FunctionInfo("vbtest", "cmd", "return info", _
-            New Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath, _
             GetType(String), _
             New Type() {GetType(String)})
     End Sub
@@ -31,7 +30,7 @@ Public Class vbtest
 
         Try
 
-            Dim cmd = DirectCast(args(0), [String])
+            Dim cmd = CType(args(0), [String])
 
             result = "empty"
 

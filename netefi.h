@@ -26,16 +26,14 @@ namespace NetEFI {
 		String^ Name;
 		String^ Parameters; 
 		String^ Description;
-        String^ AssemblyPath;
 		Type^ ReturnType;
 		array < Type^ > ^ ArgTypes;
 
-        FunctionInfo( String^ name, String^ params, String^ descr, String^ path, Type^ returnType, array < Type^ > ^ argTypes ){
+        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes ){
 
             Name = name;
             Parameters = params;
             Description = descr;
-            AssemblyPath = path;
             ReturnType = returnType;
             ArgTypes = argTypes;
         }
@@ -52,6 +50,14 @@ namespace NetEFI {
 		FunctionInfo^ GetFunctionInfo( String^ lang );
 		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ % );
 	};
+
+
+    public ref class AssemblyInfo {
+
+    public:
+        String^ Path;
+        List < IFunction^ > ^ Functions;
+    };
 
 
 	public ref class TComplex {
@@ -82,27 +88,10 @@ namespace NetEFI {
 		~Manager() {} // Деструктор
 		!Manager() {} // Финализатор
 
-		// Элементы.
-		static List < IFunction^ > ^ Items;
-        static List < FunctionInfo^ > ^ Infos;		
+        static List < AssemblyInfo^ > ^ Assemblies;
 
-		static property String^ AssemblyPath {
-
-			String^ get() {
-
-				return ( gcnew System::Uri( Assembly::GetExecutingAssembly()->CodeBase ) )->LocalPath;
-			}; 
-
-		};
-
-		static property String^ LogFile {
-
-			String^ get() {
-
-				return Path::Combine( Path::GetDirectoryName( AssemblyPath ), gcnew String( L"log.txt" ) );
-			}; 
-
-		};
+        static property String^ AssemblyPath { String^ get(); };
+		static property String^ LogFile { String^ get(); };
 
 	public:
         
@@ -123,7 +112,11 @@ namespace NetEFI {
         static bool Initialize();
 
 		// Загрузка пользовательских сборок.
-		static bool LoadAssemblies();		
+		static bool LoadAssemblies();	
+
+        static PVOID CreateUserFunction( FunctionInfo^, PVOID );
+
+        static void InjectCode( PBYTE &, int, int );
 	};
 
 }

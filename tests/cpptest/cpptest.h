@@ -12,82 +12,77 @@ using namespace std;
 using namespace NetEFI;
 
 
-namespace Functions {
+public ref class cpptest: public IFunction {
 
-    public ref class cpptest: public IFunction {
+private:
+    FunctionInfo ^ info;
 
-    private:
-        FunctionInfo ^ info;
+protected:
 
-    protected:
+    ~cpptest() {}
 
-        ~cpptest() {}
+public:
 
-    public:
+    virtual property FunctionInfo^ Info {
 
-        virtual property FunctionInfo^ Info {
+        FunctionInfo^ get() { return info; }
+    }
 
-            FunctionInfo^ get() { return info; }
-        }
+    !cpptest() {}
 
-        !cpptest() {}
+    cpptest() {
 
-        cpptest() {
-
-			info = gcnew FunctionInfo(
+		info = gcnew FunctionInfo(
                 
-                "cpptest", "cmd", "return info",
-                ( gcnew Uri( Assembly::GetExecutingAssembly()->CodeBase ) )->LocalPath, 
-                String::typeid,
-                gcnew array<Type^> { String::typeid }
-            );
-        }
+            "cpptest", "cmd", "return info",            
+            String::typeid,
+            gcnew array<Type^> { String::typeid }
+        );
+    }
 
-        virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
+    virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
 
-            return info;
-        }
+        return info;
+    }
 
-        virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result ) {            
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result ) {            
 
-            try {
+        try {
 
-                String^ cmd = ( String^ ) args[0];
+            String^ cmd = ( String^ ) args[0];
 
-                result = gcnew String( "empty" );
+            result = gcnew String( "empty" );
 
-                if ( cmd->Equals( gcnew String("info") ) ) {
+            if ( cmd->Equals( gcnew String("info") ) ) {
 
-                    result = Assembly::GetExecutingAssembly()->ToString();
+                result = Assembly::GetExecutingAssembly()->ToString();
 
-                } else if ( cmd->Equals( gcnew String("list") ) ) {
+            } else if ( cmd->Equals( gcnew String("list") ) ) {
 
-                    List<String^>^ list = gcnew List<String^>();
+                List<String^>^ list = gcnew List<String^>();
 
-                    array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
+                array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
 
-                    for each ( Type^ type in types ) {
+                for each ( Type^ type in types ) {
 
-                        if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                        IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
+                    IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
                         
-                        list->Add( f->Info->Name );
-                    }
-
-                    result = String::Join( gcnew String( "," ), list->ToArray() );
+                    list->Add( f->Info->Name );
                 }
 
-            } catch ( Exception^ ex ) {
-
-                result = nullptr;
-                return false;
+                result = String::Join( gcnew String( "," ), list->ToArray() );
             }
 
-            return true;
+        } catch ( Exception^ ex ) {
+
+            result = nullptr;
+            return false;
         }
 
-    };
+        return true;
+    }
 
-}
+};
 

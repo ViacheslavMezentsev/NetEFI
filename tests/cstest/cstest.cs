@@ -1,75 +1,71 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+
 using NetEFI;
 
 
-namespace Functions {
+public class cstest: IFunction {
 
-    public class cstest: IFunction {
+    private FunctionInfo _info;
 
-        private FunctionInfo _info;
+    public FunctionInfo Info {
 
-        public FunctionInfo Info {
+        get { return _info; }
+    }
 
-            get { return _info; }
-        }
+    public cstest() {
 
-        public cstest() {
+        _info = new FunctionInfo(
 
-            _info = new FunctionInfo(
+            "cstest", "cmd", "return info",            
+            typeof( String ),
+            new[] { typeof( String ) }
+            );
+    }
 
-                "cstest", "cmd", "return info",
-                new Uri( Assembly.GetExecutingAssembly().CodeBase ).LocalPath,
-                typeof( String ),
-                new[] { typeof( String ) }
-                );
-        }
+    public FunctionInfo GetFunctionInfo( string lang ) {
 
-        public FunctionInfo GetFunctionInfo( string lang ) {
+        return Info;
+    }
 
-            return Info;
-        }
+    public bool NumericEvaluation( object[] args, out object result ) {
 
-        public bool NumericEvaluation( object[] args, out object result ) {
+        try {
 
-            try {
+            var cmd = ( String ) args[0];
 
-                var cmd = ( String ) args[0];
+            result = "empty";
 
-                result = "empty";
+            if (cmd.Equals("info")) {
 
-                if (cmd.Equals("info")) {
+                result = Assembly.GetExecutingAssembly().ToString();
 
-                    result = Assembly.GetExecutingAssembly().ToString();
+            } else if (cmd.Equals("list")) {
 
-                } else if (cmd.Equals("list")) {
+                var list = new List<string>();
 
-                    var list = new List<string>();
+                var types = Assembly.GetExecutingAssembly().GetTypes();
 
-                    var types = Assembly.GetExecutingAssembly().GetTypes();
+                foreach ( var type in types ) {
 
-                    foreach ( var type in types ) {
+                    if ( !type.IsPublic || type.IsAbstract || !typeof(IFunction).IsAssignableFrom( type ) ) continue;
 
-                        if ( !type.IsPublic || type.IsAbstract || !typeof(IFunction).IsAssignableFrom( type ) ) continue;
+                    var f = ( IFunction ) Activator.CreateInstance( type );
 
-                        var f = ( IFunction ) Activator.CreateInstance( type );
-
-                        list.Add( f.Info.Name );
-                    }
-
-                    result = String.Join(", ", list.ToArray());
+                    list.Add( f.Info.Name );
                 }
 
-            } catch ( Exception ex ) {
-
-                result = null;
-                return false;
+                result = String.Join(", ", list.ToArray());
             }
 
-            return true;
+        } catch ( Exception ex ) {
+
+            result = null;
+            return false;
         }
 
+        return true;
     }
 
 }

@@ -16,7 +16,6 @@ Public Class vbtest3
     Public Sub New()
 
         _info = New FunctionInfo("vbtest3", "n, m", "return matrix n, m", _
-            New Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath, _
             GetType(TComplex(,)), _
             New Type() {GetType(TComplex), GetType(TComplex)})
     End Sub
@@ -34,8 +33,8 @@ Public Class vbtest3
 
         Try
 
-            Dim n = CInt(DirectCast(args(0), TComplex).Real)
-            Dim m = CInt(DirectCast(args(1), TComplex).Real)
+            Dim n = CInt(CType(args(0), TComplex).Real)
+            Dim m = CInt(CType(args(1), TComplex).Real)
 
             mat = New TComplex(n - 1, m - 1) {}
 

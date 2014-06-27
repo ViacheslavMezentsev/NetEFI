@@ -37,7 +37,7 @@ namespace NetEFI {
 
 			info = gcnew FunctionInfo(
                 
-                "test", "", "test(x, y)", Manager::AssemblyPath, 
+                "test", "", "test(x, y)",
                 array<TComplex^,2>::typeid,
                 gcnew array<Type^> { TComplex::typeid, String::typeid }
             );

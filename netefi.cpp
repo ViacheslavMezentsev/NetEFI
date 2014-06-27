@@ -14,10 +14,11 @@ using namespace NetEFI;
 
 
 #define MAX_FUNCTIONS_COUNT 10000UL
-#define DYNAMIC_BLOCK_SIZE 15
+#define DYNAMIC_BLOCK_SIZE 25
 
 
-static int id;
+static int assemblyId;
+static int functionId;
 static PBYTE pCode;
 
 PCREATE_USER_FUNCTION CreateUserFunction; 
@@ -35,17 +36,26 @@ HRESULT UserFunction( PVOID items[] ) {
     MCSTRING * pmcString;
     COMPLEXSCALAR * pmcScalar;
     COMPLEXARRAY * pmcArray;
+    
     Type^ type;
+    IFunction^ func;
 
-    FunctionInfo^ info = Manager::Infos[ id ];
+    try {
+        
+        func = Manager::Assemblies[ assemblyId ]->Functions[ functionId ];
 
-    int Count = info->ArgTypes->GetLength(0);
+    } catch ( ... ) {
+
+        return E_FAIL;
+    }
+
+    int Count = func->Info->ArgTypes->GetLength(0);
 
     array < Object^ > ^ args = gcnew array < Object^ >( Count );
 
     for ( int n = 0; n < Count; n++ ) {
 
-        type = info->ArgTypes[n];
+        type = func->Info->ArgTypes[n];
 
         // MCSTRING
         // TODO: Преобразовывать ansi в unicode.
@@ -101,7 +111,7 @@ HRESULT UserFunction( PVOID items[] ) {
     // TODO: Сделать вызов в отдельном потоке.
     Object^ result;
 
-    if ( !Manager::Items[ id ]->NumericEvaluation( args, result ) ) return E_FAIL;
+    if ( !func->NumericEvaluation( args, result ) ) return E_FAIL;
 
     // Преобразуем результат.
     type = result->GetType();
@@ -219,6 +229,18 @@ LRESULT CallbackFunction( void * out, ... ) {
 #pragma managed
 
 
+String^ Manager::AssemblyPath::get() {
+
+    return ( gcnew System::Uri( Assembly::GetExecutingAssembly()->CodeBase ) )->LocalPath;
+};
+
+
+String^ Manager::LogFile::get() {
+
+    return Path::Combine( Path::GetDirectoryName( AssemblyPath ), gcnew String( L"log.txt" ) );
+};
+
+
 void Manager::LogInfo( string text ) {
 
     LogInfo( marshal_as<String^>( text ) );
@@ -310,21 +332,21 @@ bool Manager::Initialize() {
         return false;
     }
 
-    CreateUserFunction          = ( PCREATE_USER_FUNCTION )             ::GetProcAddress( hLib, "CreateUserFunction" );
-    CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE )  ::GetProcAddress( hLib, "CreateUserErrorMessageTable" ); 
-    MathcadAllocate             = ( PMATHCAD_ALLOCATE )                 ::GetProcAddress( hLib, "MathcadAllocate" ); 
-    MathcadFree                 = ( PMATHCAD_FREE )                     ::GetProcAddress( hLib, "MathcadFree" ); 
-    MathcadArrayAllocate        = ( PMATHCAD_ARRAY_ALLOCATE )           ::GetProcAddress( hLib, "MathcadArrayAllocate" ); 
-    MathcadArrayFree            = ( PMATHCAD_ARRAY_FREE )               ::GetProcAddress( hLib, "MathcadArrayFree" ); 
-    isUserInterrupted           = ( PIS_USER_INTERRUPTED )              ::GetProcAddress( hLib, "isUserInterrupted" ); 
+    ::CreateUserFunction          = ( PCREATE_USER_FUNCTION )             ::GetProcAddress( hLib, "CreateUserFunction" );
+    ::CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE )  ::GetProcAddress( hLib, "CreateUserErrorMessageTable" ); 
+    ::MathcadAllocate             = ( PMATHCAD_ALLOCATE )                 ::GetProcAddress( hLib, "MathcadAllocate" ); 
+    ::MathcadFree                 = ( PMATHCAD_FREE )                     ::GetProcAddress( hLib, "MathcadFree" ); 
+    ::MathcadArrayAllocate        = ( PMATHCAD_ARRAY_ALLOCATE )           ::GetProcAddress( hLib, "MathcadArrayAllocate" ); 
+    ::MathcadArrayFree            = ( PMATHCAD_ARRAY_FREE )               ::GetProcAddress( hLib, "MathcadArrayFree" ); 
+    ::isUserInterrupted           = ( PIS_USER_INTERRUPTED )              ::GetProcAddress( hLib, "isUserInterrupted" ); 
 
-    if ( CreateUserFunction == NULL 
-        || CreateUserErrorMessageTable == NULL 
-        || MathcadAllocate == NULL 
-        || MathcadFree == NULL
-        || MathcadArrayAllocate == NULL 
-        || MathcadArrayFree == NULL 
-        || isUserInterrupted == NULL ) { 
+    if ( ::CreateUserFunction == NULL 
+        || ::CreateUserErrorMessageTable == NULL 
+        || ::MathcadAllocate == NULL 
+        || ::MathcadFree == NULL
+        || ::MathcadArrayAllocate == NULL 
+        || ::MathcadArrayFree == NULL 
+        || ::isUserInterrupted == NULL ) { 
         
         LogError( "GetProcAddress() returns NULL." );
 
@@ -408,16 +430,110 @@ bool Manager::IsManagedAssembly( String^ fileName ) {
 }
 
 
+PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
+
+    FUNCTIONINFO fi;
+                
+	marshal_context context;
+
+	String^ s = info->Name;
+    fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
+
+	s = info->Parameters;
+    fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
+
+	s = info->Description;
+    fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
+
+    fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
+
+    Type^ type = info->ReturnType;
+
+    // How to check an object's type in C++/CLI?
+    // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
+    if ( type->Equals( String::typeid ) ) {
+
+        fi.returnType = STRING;
+
+    } else if ( type->Equals( TComplex::typeid ) ) {
+
+        fi.returnType = COMPLEX_SCALAR;
+
+    } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
+
+        fi.returnType = COMPLEX_ARRAY;            
+            
+    } else return NULL;
+            
+    fi.nArgs = info->ArgTypes->GetLength(0);
+
+    if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
+            
+    for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
+
+        type = info->ArgTypes[m];
+
+        if ( type->Equals( String::typeid ) ) {
+
+            fi.argType[m] = STRING;
+
+        } else if ( type->Equals( TComplex::typeid ) ) {
+
+            fi.argType[m] = COMPLEX_SCALAR;
+
+        } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
+
+            fi.argType[m] = COMPLEX_ARRAY;            
+            
+        } else return NULL;
+
+    }            
+
+    return ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi ); 
+}
+
+
+// TODO: 64-bit.
+void Manager::InjectCode( PBYTE & p, int k, int n ) {
+
+    // Пересылка константы (номера сборки) в глобальную переменную.
+    * p++ = 0xB8; // mov eax, imm32
+    p[0] = k;
+    p += sizeof( int );
+
+    * p++ = 0xA3; // mov [id], eax
+    ( int * & ) p[0] = & assemblyId; 
+    p += sizeof( int * ); 
+
+    // Пересылка константы (номера функции) в глобальную переменную.
+    * p++ = 0xB8; // mov eax, imm32
+    p[0] = n;
+    p += sizeof( int );
+
+    * p++ = 0xA3; // mov [id], eax
+    ( int * & ) p[0] = & functionId; 
+    p += sizeof( int * );         
+
+    // jmp to CallbackFunction. 
+    * p++ = 0xE9;
+    ( UINT & ) p[0] = ( PBYTE ) ::CallbackFunction - 4 - p;
+    p += sizeof( PBYTE );
+}
+
+
 // Загрузка пользовательских библиотек.
 bool Manager::LoadAssemblies() {
 
     try {
 
         // Списки функций и их карточек.
-        Manager::Items = gcnew List < IFunction^ >();
-        Manager::Infos = gcnew List < FunctionInfo^ >();
+        Manager::Assemblies = gcnew List < AssemblyInfo^ >();
 
 #ifdef _DEBUG
+
+        AssemblyInfo^ assemblyInfo = gcnew AssemblyInfo();
+        assemblyInfo->Path = AssemblyPath;
+        assemblyInfo->Functions = gcnew List< IFunction^ >();
 
         array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
 
@@ -427,8 +543,10 @@ bool Manager::LoadAssemblies() {
 
             IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
 
-            Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
+            assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
         }
+
+        if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
 
 #else
         // Получаем список всех библиотек в текущей папке.
@@ -441,9 +559,14 @@ bool Manager::LoadAssemblies() {
             
                 if ( !IsManagedAssembly( path ) || path->Equals( AssemblyPath ) ) continue;
 
+                AssemblyInfo^ assemblyInfo = gcnew AssemblyInfo();
+
                 // LoadFile vs. LoadFrom
                 // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
                 Assembly^ assembly = Assembly::LoadFile( path );
+
+                assemblyInfo->Path = path;
+                assemblyInfo->Functions = gcnew List< IFunction^ >();
 
                 // Assembly и GetType().
                 // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
@@ -452,8 +575,10 @@ bool Manager::LoadAssemblies() {
 
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    Manager::Items->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
+                    assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
                 }                
+
+                if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
 
             } catch ( Exception^ ex ) {
 
@@ -465,103 +590,39 @@ bool Manager::LoadAssemblies() {
 #endif
         // Теперь регистрируем все функции в Mathcad.
         PBYTE p = pCode;
+        int totalCount = 0;
 
-        for ( int n = 0; n < Manager::Items->Count; n++ ) {
-            
-            if ( n >= MAX_FUNCTIONS_COUNT ) break;
-            
-            String^ lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
-            FunctionInfo^ info = Manager::Items[n]->GetFunctionInfo( lang );
-            
-            Manager::Infos->Add( info ); 
+        for ( int k = 0; k < Assemblies->Count; k++ ) {
 
-            FUNCTIONINFO fi;
+            AssemblyInfo^ assemblyInfo = Assemblies[k];
+
+            for ( int n = 0; n < assemblyInfo->Functions->Count; n++ ) {
+            
+                if ( totalCount >= MAX_FUNCTIONS_COUNT ) break;
+            
+                String^ lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
+
+                FunctionInfo^ info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
+
+                if ( CreateUserFunction( info, p ) == NULL ) continue;
+
+                InjectCode( p, k, n );                
+
+                List< String^ >^ params = gcnew List< String^ >();
                 
-			marshal_context context;
+                for each ( Type^ type in info->ArgTypes ) params->Add( type->ToString() );
 
-			String^ s = info->Name;
-            fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
+                String^ args = String::Join( gcnew String( "," ), params->ToArray() );
 
-			s = info->Parameters;
-            fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
+                String^ text = ( info->Parameters->Length > 0 ) 
+                    ? String::Format( "[ {0} ] {1}", info->Parameters, info->Description ) 
+                    : String::Format( "[ {0} ] {1}", args, info->Description );
 
-			s = info->Description;
-            fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
+                LogInfo( String::Format( "[{0}] [{1}] {2} - {3}", totalCount, Path::GetFileName( assemblyInfo->Path ), info->Name, text ) );                
 
-            fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
+                totalCount++;
+            }
 
-            Type^ type = info->ReturnType;
-
-            // How to check an object's type in C++/CLI?
-            // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
-            if ( type->Equals( String::typeid ) ) {
-
-                fi.returnType = STRING;
-
-            } else if ( type->Equals( TComplex::typeid ) ) {
-
-                fi.returnType = COMPLEX_SCALAR;
-
-            } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
-
-                fi.returnType = COMPLEX_ARRAY;            
-            
-            } else continue;
-            
-            fi.nArgs = info->ArgTypes->GetLength(0);
-
-            if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
-            
-            for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
-
-                type = info->ArgTypes[m];
-
-                if ( type->Equals( String::typeid ) ) {
-
-                    fi.argType[m] = STRING;
-
-                } else if ( type->Equals( TComplex::typeid ) ) {
-
-                    fi.argType[m] = COMPLEX_SCALAR;
-
-                } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
-
-                    fi.argType[m] = COMPLEX_ARRAY;            
-            
-                // TODO: continue для внешнего цикла.
-                } else break;
-
-            }            
-
-            void * res = ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi );  
-
-            if ( res == NULL ) continue;
-
-            List< String^ >^ params = gcnew List< String^ >();
-                
-            for each ( Type^ type in info->ArgTypes ) params->Add( type->ToString() );
-
-            String^ args = String::Join( gcnew String( "," ), params->ToArray() );
-
-            String^ text = ( info->Parameters->Length > 0 ) 
-                ? String::Format( "[ {0} ] {1}", info->Parameters, info->Description ) 
-                : String::Format( "[ {0} ] {1}", args, info->Description );
-
-            LogInfo( String::Format( "[{0}] [{1}] {2} - {3}", n, Path::GetFileName( info->AssemblyPath ), info->Name, text ) );
-
-            // Пересылка константы (номера функции) в глобальную переменную id.
-            * p++ = 0xB8; // mov eax, imm32
-            p[0] = n;
-            p += sizeof( int );
-
-            * p++ = 0xA3; // mov [id], eax
-            ( int * & ) p[0] = & id; 
-            p += sizeof( int * );         
-
-            // jmp to CallbackFunction. 
-            * p++ = 0xE9;
-            ( UINT & ) p[0] = ( PBYTE ) ::CallbackFunction - 4 - p;
-            p += sizeof( PBYTE );
         }
 
     } catch ( System::Exception^ ex ) {

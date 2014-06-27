@@ -16,7 +16,6 @@ Public Class vbtest1
     Public Sub New()
 
         _info = New FunctionInfo("vbtest1", "x", "return complex scalar 2 * x", _
-            New Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath, _
             GetType(TComplex), _
             New Type() {GetType(TComplex)})
     End Sub
@@ -30,7 +29,7 @@ Public Class vbtest1
 
         Try
 
-            Dim arg0 = DirectCast(args(0), TComplex)
+            Dim arg0 = CType(args(0), TComplex)
 
             result = New TComplex(2 * arg0.Real, 2 * arg0.Imaginary)
 

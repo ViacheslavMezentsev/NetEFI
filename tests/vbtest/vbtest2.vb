@@ -17,7 +17,6 @@ Public Class vbtest2
     Public Sub New()
 
         _info = New FunctionInfo("vbtest2", "separ, v", "return string: v[0] separ v[1] separ ...", _
-            New Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath, _
             GetType(String), _
             New Type() {GetType(String), GetType(TComplex(,))})
     End Sub
@@ -31,8 +30,8 @@ Public Class vbtest2
 
         Try
 
-            Dim d = DirectCast(args(0), [String])
-            Dim v = DirectCast(args(1), TComplex(,))
+            Dim d = CType(args(0), [String])
+            Dim v = CType(args(1), TComplex(,))
 
             Dim len As Integer = v.GetLength(0)
 
