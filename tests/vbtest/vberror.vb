@@ -4,8 +4,6 @@
 Public Class vberror
     Implements IFunction
 
-    Public Shared Errors As [String]() = {"vberror 1", "vberror 2", "vberror 3", "vberror 4"}
-
     Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
 
         Get

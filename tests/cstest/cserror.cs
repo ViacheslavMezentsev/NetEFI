@@ -2,9 +2,7 @@
 using NetEFI;
 
 
-public class cserror: IFunction {
-
-    public static String[] Errors = { "cserror 1", "cserror 2", "cserror 3", "cserror 4" };
+public partial class cserror: IFunction {
 
     public FunctionInfo Info {
 
