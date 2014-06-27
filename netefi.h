@@ -19,6 +19,20 @@ LRESULT GlobalFunction( void * out, ... );
 
 namespace NetEFI {
 
+    public ref class EFIException: Exception {
+      
+    public:
+
+        int ArgNum;
+        int ErrNum;
+
+        EFIException( int errNum, int argNum ) {
+
+            ErrNum = errNum;
+            ArgNum = argNum;
+        }
+    };
+
 	public ref class FunctionInfo {
 
 	public:
@@ -45,7 +59,7 @@ namespace NetEFI {
 
 	public:
 
-		property FunctionInfo^ Info { FunctionInfo^ get(); }
+        property FunctionInfo^ Info { FunctionInfo^ get(); }        
 
 		FunctionInfo^ GetFunctionInfo( String^ lang );
 		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ % );
@@ -57,6 +71,7 @@ namespace NetEFI {
     public:
         String^ Path;
         List < IFunction^ > ^ Functions;
+        array < String ^ > ^ Errors;
     };
 
 
@@ -115,6 +130,8 @@ namespace NetEFI {
 		static bool LoadAssemblies();	
 
         static PVOID CreateUserFunction( FunctionInfo^, PVOID );
+
+        static void CreateUserErrorMessageTable( array < String ^ > ^ );
 
         static void InjectCode( PBYTE &, int, int );
 	};

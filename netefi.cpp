@@ -17,9 +17,9 @@ using namespace NetEFI;
 #define DYNAMIC_BLOCK_SIZE 25
 
 
-static int assemblyId;
-static int functionId;
-static PBYTE pCode;
+static int assemblyId = -1;
+static int functionId = -1;
+static PBYTE pCode = NULL;
 
 PCREATE_USER_FUNCTION CreateUserFunction; 
 PCREATE_USER_ERROR_MESSAGE_TABLE CreateUserErrorMessageTable; 
@@ -111,7 +111,37 @@ HRESULT UserFunction( PVOID items[] ) {
     // TODO: Сделать вызов в отдельном потоке.
     Object^ result;
 
-    if ( !func->NumericEvaluation( args, result ) ) return E_FAIL;
+    try {
+    
+        if ( !func->NumericEvaluation( args, result ) ) return E_FAIL;
+    
+    } catch ( EFIException^ ex ) {       
+
+        if ( Manager::Assemblies[ assemblyId ]->Errors == nullptr ) return E_FAIL;
+
+        if ( ( ex->ErrNum > 0 ) 
+            && ( ex->ErrNum <= Manager::Assemblies[ assemblyId ]->Errors->GetLength(0) ) 
+            && ( ex->ArgNum > 0 )
+            && ( ex->ArgNum <= func->Info->ArgTypes->GetLength(0) ) ) {
+            
+            int offset = 0;
+
+            for ( int n = 0; n < assemblyId; n++ ) {
+            
+                offset += Manager::Assemblies[ assemblyId ]->Errors->GetLength(0);
+            }
+
+            return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
+
+        } else {
+
+            return E_FAIL;
+        }
+
+    } catch ( System::Exception^ ex ) {
+
+        return E_FAIL;
+    }
 
     // Преобразуем результат.
     type = result->GetType();
@@ -356,6 +386,7 @@ bool Manager::Initialize() {
     return true; 
 }
 
+
 // How to determine whether a DLL is a managed assembly or native (prevent loading a native dll)?
 // http://stackoverflow.com/questions/367761/how-to-determine-whether-a-dll-is-a-managed-assembly-or-native-prevent-loading
 bool Manager::IsManagedAssembly( String^ fileName ) {
@@ -430,67 +461,112 @@ bool Manager::IsManagedAssembly( String^ fileName ) {
 }
 
 
+void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors ) {
+    
+    char ** ErrorMessageTable;
+    
+    int count = errors->GetLength(0);
+
+    ErrorMessageTable = new char * [ count ];
+
+    for ( int n = 0; n < count; n++ ) {
+
+        String^ text = errors[n];
+
+        string s = marshal_as<string>( text );
+
+        ErrorMessageTable[n] = ::MathcadAllocate( s.length() + 1 );
+
+        ::memset( ErrorMessageTable[n], 0, s.length() + 1 );
+                    
+        // Копируем строку из временной области памяти.
+        ::memcpy( ErrorMessageTable[n], s.c_str(), s.length() );
+    }
+
+    // Функция копирует содержимое таблицы во внутреннюю память.
+    if ( !::CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) ) {
+        
+        LogError( "CreateUserErrorMessageTable failed" );
+    }
+
+    for ( int n = 0; n < count; n++ ) {
+
+        ::MathcadFree( ErrorMessageTable[n] );
+    }
+
+    delete[] ErrorMessageTable; 
+}
+
+
 PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
 
-    FUNCTIONINFO fi;
+    try {
+
+        FUNCTIONINFO fi;
                 
-	marshal_context context;
+	    marshal_context context;
 
-	String^ s = info->Name;
-    fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
+	    String^ s = info->Name;
+        fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
 
-	s = info->Parameters;
-    fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
+	    s = info->Parameters;
+        fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
 
-	s = info->Description;
-    fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
+	    s = info->Description;
+        fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
 
-    fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
+        fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
 
-    Type^ type = info->ReturnType;
+        Type^ type = info->ReturnType;
 
-    // How to check an object's type in C++/CLI?
-    // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
-    if ( type->Equals( String::typeid ) ) {
-
-        fi.returnType = STRING;
-
-    } else if ( type->Equals( TComplex::typeid ) ) {
-
-        fi.returnType = COMPLEX_SCALAR;
-
-    } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
-
-        fi.returnType = COMPLEX_ARRAY;            
-            
-    } else return NULL;
-            
-    fi.nArgs = info->ArgTypes->GetLength(0);
-
-    if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
-            
-    for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
-
-        type = info->ArgTypes[m];
-
+        // How to check an object's type in C++/CLI?
+        // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
         if ( type->Equals( String::typeid ) ) {
 
-            fi.argType[m] = STRING;
+            fi.returnType = STRING;
 
         } else if ( type->Equals( TComplex::typeid ) ) {
 
-            fi.argType[m] = COMPLEX_SCALAR;
+            fi.returnType = COMPLEX_SCALAR;
 
         } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
 
-            fi.argType[m] = COMPLEX_ARRAY;            
+            fi.returnType = COMPLEX_ARRAY;            
             
-        // TODO: Вывод сообщения в лог.
         } else return NULL;
+            
+        fi.nArgs = info->ArgTypes->GetLength(0);
 
-    }            
+        if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
+            
+        for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
 
-    return ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi ); 
+            type = info->ArgTypes[m];
+
+            if ( type->Equals( String::typeid ) ) {
+
+                fi.argType[m] = STRING;
+
+            } else if ( type->Equals( TComplex::typeid ) ) {
+
+                fi.argType[m] = COMPLEX_SCALAR;
+
+            } else if ( type->Equals( array<TComplex^,2>::typeid ) ) {
+
+                fi.argType[m] = COMPLEX_ARRAY;            
+            
+            // TODO: Вывод сообщения в лог.
+            } else return NULL;
+
+        }            
+
+        return ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi ); 
+
+    } catch (...) {
+
+        // TODO: Вывод сообщения в лог.
+        return NULL;
+    }    
 }
 
 
@@ -545,6 +621,16 @@ bool Manager::LoadAssemblies() {
             IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
 
             assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
+
+            // Проверяем наличие таблицы с сообщениями об обшибках.
+            if ( assemblyInfo->Errors != nullptr ) continue;
+
+            FieldInfo^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ), 
+                Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
+
+            if ( errorsFieldInfo == nullptr ) continue;
+                   
+            assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
         }
 
         if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
@@ -568,7 +654,7 @@ bool Manager::LoadAssemblies() {
 
                 assemblyInfo->Path = path;
                 assemblyInfo->Functions = gcnew List< IFunction^ >();
-
+                
                 // Assembly и GetType().
                 // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
@@ -577,6 +663,16 @@ bool Manager::LoadAssemblies() {
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
                     assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
+
+                    // Проверяем наличие таблицы с сообщениями об обшибках.
+                    if ( assemblyInfo->Errors != nullptr ) continue;
+
+                    FieldInfo^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ), 
+                        Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
+
+                    if ( errorsFieldInfo == nullptr ) continue;
+                   
+                    assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
                 }                
 
                 if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
@@ -589,13 +685,20 @@ bool Manager::LoadAssemblies() {
 
         }
 #endif
-        // Теперь регистрируем все функции в Mathcad.
-        PBYTE p = pCode;
+        // Теперь регистрируем все функции в Mathcad.        
         int totalCount = 0;
+        PBYTE p = pCode;
+        List<String^>^ errorMessageTable = gcnew List<String^>();
 
         for ( int k = 0; k < Assemblies->Count; k++ ) {
 
             AssemblyInfo^ assemblyInfo = Assemblies[k];
+
+            // Соединияем все таблицы.
+            if ( assemblyInfo->Errors != nullptr ) {
+
+                errorMessageTable->AddRange( assemblyInfo->Errors );
+            }
 
             for ( int n = 0; n < assemblyInfo->Functions->Count; n++ ) {
             
@@ -625,6 +728,9 @@ bool Manager::LoadAssemblies() {
             }
 
         }
+
+        // Таблица может быть только одна.
+        CreateUserErrorMessageTable( errorMessageTable->ToArray() );
 
     } catch ( System::Exception^ ex ) {
 

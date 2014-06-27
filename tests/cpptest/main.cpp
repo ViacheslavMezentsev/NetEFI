@@ -4,4 +4,5 @@
 
 #include "cpptest.h"
 #include "cppecho.h"
+#include "cpperror.h"
 

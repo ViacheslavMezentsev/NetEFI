@@ -72,7 +72,7 @@ public:
                     list->Add( f->Info->Name );
                 }
 
-                result = String::Join( gcnew String( "," ), list->ToArray() );
+                result = String::Join( gcnew String( ", " ), list->ToArray() );
             }
 
         } catch ( Exception^ ex ) {

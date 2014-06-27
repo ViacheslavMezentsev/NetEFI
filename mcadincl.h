@@ -140,6 +140,7 @@ typedef void * ( * PCREATE_USER_FUNCTION ) ( HINSTANCE, FUNCTIONINFO * );
 // hDLL - Handle of the DLL supplied by the DLL entry point routine.
 // nErrorMessages - Number of error messages in the table.
 // ErrorMessageTable - An array of n strings with the text of the error messages.
+// The return value is TRUE if the registration is successful. Otherwise, it is FALSE.
 /*
 BOOL CreateUserErrorMessageTable( HINSTANCE hDLL, 
     unsigned int nErrorMessages, char  * ErrorMessageTable[] );
