@@ -66,6 +66,7 @@
     <Import Include="System.Diagnostics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="vbecho.vb" />
     <Compile Include="vbtest.vb" />
     <Compile Include="vbtest1.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />

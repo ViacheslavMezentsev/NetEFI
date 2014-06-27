@@ -485,6 +485,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
 
             fi.argType[m] = COMPLEX_ARRAY;            
             
+        // TODO: Вывод сообщения в лог.
         } else return NULL;
 
     }            

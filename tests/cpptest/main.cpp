@@ -3,4 +3,5 @@
 #include "stdafx.h"
 
 #include "cpptest.h"
+#include "cppecho.h"
 

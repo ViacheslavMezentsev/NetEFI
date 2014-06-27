@@ -60,6 +60,7 @@
     <Compile Include="cstest1.cs" />
     <Compile Include="cstest2.cs" />
     <Compile Include="cstest3.cs" />
+    <Compile Include="csecho.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
