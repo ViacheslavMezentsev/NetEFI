@@ -31,28 +31,34 @@ PIS_USER_INTERRUPTED isUserInterrupted;
 
                   
 // Обобщённая функция.
-HRESULT UserFunction( PVOID items[] ) {
+LRESULT UserFunction( PVOID items[] ) {
 
     MCSTRING * pmcString;
     COMPLEXSCALAR * pmcScalar;
     COMPLEXARRAY * pmcArray;
     
     Type^ type;
-    IFunction^ func;
+    AssemblyInfo^ assemblyInfo = nullptr;
+    IFunction^ func = nullptr;
 
     try {
         
-        func = Manager::Assemblies[ assemblyId ]->Functions[ functionId ];
+        assemblyInfo = Manager::Assemblies[ assemblyId ];
+        func = assemblyInfo->Functions[ functionId ];
 
-    } catch ( ... ) {
+    } catch ( System::Exception^ ex ) {
 
+        Manager::LogError( String::Format( "assemblyId: {0}, functionId: {1}", assemblyId, functionId ) );
         return E_FAIL;
     }
 
+    // Узнаём общее число параметров функции.
     int Count = func->Info->ArgTypes->GetLength(0);
 
+    // Создаём управляемый массив параметров функции.
     array < Object^ > ^ args = gcnew array < Object^ >( Count );
 
+    // Преобразуем каждый тип параметра к управляемому аналогу.
     for ( int n = 0; n < Count; n++ ) {
 
         type = func->Info->ArgTypes[n];
@@ -103,6 +109,11 @@ HRESULT UserFunction( PVOID items[] ) {
             }
             
             args[n] = Matrix;
+        
+        } else {
+
+            Manager::LogError( String::Format( "[{0}] Unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() ) );
+            return E_FAIL;
         }
         
     }
@@ -117,29 +128,38 @@ HRESULT UserFunction( PVOID items[] ) {
     
     } catch ( EFIException^ ex ) {       
 
-        if ( Manager::Assemblies[ assemblyId ]->Errors == nullptr ) return E_FAIL;
+        if ( assemblyInfo->Errors == nullptr ) {
+
+            Manager::LogError( String::Format( "[{0}] {1}", func->Info->Name, "Errors table is empty" ) );
+            return E_FAIL;
+        }
 
         if ( ( ex->ErrNum > 0 ) 
-            && ( ex->ErrNum <= Manager::Assemblies[ assemblyId ]->Errors->GetLength(0) ) 
+            && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) ) 
             && ( ex->ArgNum > 0 )
             && ( ex->ArgNum <= func->Info->ArgTypes->GetLength(0) ) ) {
             
+            // Рассчитываем положение таблицы ошибок для текущей сборки
+            // в общей зарегистрированной таблице.
             int offset = 0;
 
             for ( int n = 0; n < assemblyId; n++ ) {
             
-                offset += Manager::Assemblies[ assemblyId ]->Errors->GetLength(0);
+                offset += assemblyInfo->Errors->GetLength(0);
             }
 
+            // См. Руководство разработчика библиотек пользователя.
             return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
 
         } else {
 
+            Manager::LogError( String::Format( "[{0}] {1}", func->Info->Name, ex->Message ) );
             return E_FAIL;
         }
 
     } catch ( System::Exception^ ex ) {
 
+        Manager::LogError( String::Format( "[{0}] {1}", func->Info->Name, ex->Message ) );
         return E_FAIL;
     }
 
@@ -243,6 +263,10 @@ HRESULT UserFunction( PVOID items[] ) {
             }
         }
 
+    } else {
+
+        Manager::LogError( String::Format( "[{0}] Unknown return type: {1}", func->Info->Name, type->ToString() ) );
+        return E_FAIL;
     }
 
     return S_OK;
@@ -306,17 +330,43 @@ void Manager::LogError( String^ Text ) {
 /// <param name="args">Event data</param>
 /// <returns>The loaded assembly</returns>
 Assembly^ OnAssemblyResolve(Object^ sender, ResolveEventArgs^ args) {
- 
-    Manager::LogInfo( String::Format( "OnAssemblyResolve {0}", args->Name ) );
+
+    Manager::LogInfo( String::Format( "[OnAssemblyResolve] {0}", args->Name ) );
     
-    return Assembly::GetExecutingAssembly();
+    String^ finalPath = nullptr;
+
+    // Load the assembly from the specified path
+    try {
+
+        Assembly^ retval = nullptr;
+
+        finalPath = args->Name->Substring(0, args->Name->IndexOf(",") ) + gcnew String( ".dll" );
+
+        finalPath = Path::Combine( Path::GetDirectoryName( Manager::AssemblyPath ), finalPath );
+         
+        if ( File::Exists( finalPath ) ) {
+            
+            retval = Assembly::LoadFile( finalPath );
+            Manager::LogInfo( String::Format( "Assembly loaded: {0}", finalPath ) );
+
+        } else {
+
+            Manager::LogInfo( String::Format( "File not found: {0}", finalPath ) );
+        }
+        
+        return retval;
+
+    } catch ( System::Exception^ ex ) {
+
+        Manager::LogError( String::Format( "Assembly not loaded: {0}", ex->Message ) );
+    }
 }
 
 
 void PrepareManagedCode() {
 
     // Set up our resolver for assembly loading
-    AppDomain^ currentDomain = AppDomain::CurrentDomain;
+    AppDomain^ currentDomain = AppDomain::CurrentDomain;    
 
     currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
 }
@@ -330,7 +380,7 @@ bool Manager::Initialize() {
 
     try { File::Delete( LogFile ); } catch (...) {}
 
-    // TODO: Рассчитать необходимый размер динамической памяти в зависимости от
+    // Рассчёт необходимого размера динамической памяти в зависимости от
     // максимального числа поддерживаемых функций.
     size_t Size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE; 
 
@@ -349,7 +399,7 @@ bool Manager::Initialize() {
 
     if ( !File::Exists( path ) ) {
     
-        LogError( "mcaduser.dll not found." );
+        LogError( String::Format( "File not found: {0}", path ) );
         return false;
     }
 
@@ -358,7 +408,7 @@ bool Manager::Initialize() {
 
     if ( hLib == NULL ) {
         
-        LogError( "LoadLibrary() returns NULL." );
+        LogError( "[LoadLibrary] returns NULL." );
         return false;
     }
 
@@ -378,7 +428,7 @@ bool Manager::Initialize() {
         || ::MathcadArrayFree == NULL 
         || ::isUserInterrupted == NULL ) { 
         
-        LogError( "GetProcAddress() returns NULL." );
+        LogError( "[GetProcAddress] returns NULL." );
 
         return false;
     }
@@ -486,9 +536,10 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors ) {
     // Функция копирует содержимое таблицы во внутреннюю память.
     if ( !::CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) ) {
         
-        LogError( "CreateUserErrorMessageTable failed" );
+        LogError( "[CreateUserErrorMessageTable] failed" );
     }
 
+    // Освобождаем выделенную память.
     for ( int n = 0; n < count; n++ ) {
 
         ::MathcadFree( ErrorMessageTable[n] );
@@ -504,15 +555,15 @@ PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
 
         FUNCTIONINFO fi;
                 
-	    marshal_context context;
+        marshal_context context;
 
-	    String^ s = info->Name;
+        String^ s = info->Name;
         fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
 
-	    s = info->Parameters;
+        s = info->Parameters;
         fi.lpstrParameters = ( char * ) context.marshal_as<const char *>(s);
 
-	    s = info->Description;
+        s = info->Description;
         fi.lpstrDescription = ( char * ) context.marshal_as<const char *>(s);
 
         fi.lpfnMyCFunction = ( LPCFUNCTION ) p;
@@ -533,11 +584,19 @@ PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
 
             fi.returnType = COMPLEX_ARRAY;            
             
-        } else return NULL;
+        } else {
+        
+            LogError( String::Format( "[{0}] Unknown return type: {1}", info->Name, type->ToString() ) );
+            return NULL;
+        }
             
         fi.nArgs = info->ArgTypes->GetLength(0);
 
-        if ( fi.nArgs > MAX_ARGS ) fi.nArgs = MAX_ARGS;
+        if ( fi.nArgs > MAX_ARGS ) {
+         
+            LogInfo( String::Format( "[{0}] Too many arguments: {1}. Cut to MAX_ARGS = {2}", info->Name, fi.nArgs, MAX_ARGS ) );
+            fi.nArgs = MAX_ARGS;            
+        }
             
         for ( unsigned int m = 0; m < fi.nArgs; m++ ) {
 
@@ -555,16 +614,19 @@ PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
 
                 fi.argType[m] = COMPLEX_ARRAY;            
             
-            // TODO: Вывод сообщения в лог.
-            } else return NULL;
+            } else {
+            
+                LogError( String::Format( "[{0}] Unknown argument type {1}: {2}", info->Name, m, type->ToString() ) );
+                return NULL;
+            }
 
         }            
 
         return ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi ); 
 
-    } catch (...) {
+    } catch ( System::Exception^ ex ) {
 
-        // TODO: Вывод сообщения в лог.
+        LogError( String::Format( "[{0}] {1}", info->Name, ex->Message ) );
         return NULL;
     }    
 }
