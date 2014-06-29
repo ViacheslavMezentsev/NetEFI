@@ -14,7 +14,7 @@ public partial class cserror: IFunction {
 
     public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
 
-    public bool NumericEvaluation( object[] args, out object result ) {
+    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
 
         throw new EFIException( ( int ) ( ( TComplex ) args[0] ).Real, 1 );
     }

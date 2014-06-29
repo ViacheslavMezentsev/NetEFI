@@ -24,7 +24,7 @@ public:
 
     virtual FunctionInfo^ GetFunctionInfo(String^ lang) { return Info; }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result ) {
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context ) {
 
         throw gcnew EFIException( ( int ) ( ( TComplex ^ ) args[0] )->Real, 1 );
     }

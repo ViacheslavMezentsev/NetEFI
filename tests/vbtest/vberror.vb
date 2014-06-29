@@ -17,7 +17,7 @@ Public Class vberror
         Return Info
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object) As Boolean _
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
         Throw New EFIException(CInt(CType(args(0), TComplex).Real), 1)

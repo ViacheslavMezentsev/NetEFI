@@ -28,7 +28,7 @@ public class cstest3: IFunction {
         return Info;
     }
 
-    public bool NumericEvaluation( object[] args, out object result ) {
+    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
 
         TComplex[,] mat = null;
 

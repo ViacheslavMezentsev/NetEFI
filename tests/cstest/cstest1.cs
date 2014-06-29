@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection;
-
 using NetEFI;
 
 
@@ -28,7 +27,7 @@ public class cstest1: IFunction {
         return Info;
     }
 
-    public bool NumericEvaluation( object[] args, out object result ) {
+    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
 
         var arg0 = ( TComplex ) args[0];
 

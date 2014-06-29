@@ -6,7 +6,8 @@ Public Class vbtest1
 
     Private _info As FunctionInfo
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo _
+        Implements IFunction.Info
 
         Get
             Return _info
@@ -20,12 +21,14 @@ Public Class vbtest1
             New Type() {GetType(TComplex)})
     End Sub
 
-    Public Function GetFunctionInfo(ByVal lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(ByVal lang As String) As FunctionInfo _
+        Implements IFunction.GetFunctionInfo
 
         Return Info
     End Function
 
-    Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object) As Boolean Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
+        Implements IFunction.NumericEvaluation
 
         Try
 

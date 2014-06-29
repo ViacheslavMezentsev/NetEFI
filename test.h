@@ -48,7 +48,7 @@ namespace NetEFI {
             return info;
         }
 
-        virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result ) {
+        virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % ) {
 
             //TComplex^ arg1 = ( TComplex^ ) args[0];
 

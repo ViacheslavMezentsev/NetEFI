@@ -121,10 +121,11 @@ LRESULT UserFunction( PVOID items[] ) {
     // Вызываем функцию.
     // TODO: Сделать вызов в отдельном потоке.
     Object^ result;
+    Context^ context = gcnew Context();
 
     try {
     
-        if ( !func->NumericEvaluation( args, result ) ) return E_FAIL;
+        if ( !func->NumericEvaluation( args, result, context ) ) return E_FAIL;
     
     } catch ( EFIException^ ex ) {       
 
@@ -281,6 +282,12 @@ LRESULT CallbackFunction( void * out, ... ) {
 }
 
 #pragma managed
+
+
+bool Context::IsUserInterrupted::get() {
+
+    return ::isUserInterrupted == NULL ? false : ::isUserInterrupted();
+}
 
 
 String^ Manager::AssemblyPath::get() {

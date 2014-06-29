@@ -45,7 +45,7 @@ public:
         return info;
     }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result ) {            
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context ) {            
 
         try {
 

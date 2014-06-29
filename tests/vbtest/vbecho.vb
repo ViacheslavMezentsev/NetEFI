@@ -20,7 +20,7 @@ Public Class vbecho
         Return Info
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object) As Boolean _
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
         result = args(0)

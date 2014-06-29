@@ -14,7 +14,7 @@ public class csecho: IFunction {
 
     public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
 
-    public bool NumericEvaluation( object[] args, out object result ) {
+    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
 
         result = args[0];
 

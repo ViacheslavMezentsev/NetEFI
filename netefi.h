@@ -54,6 +54,14 @@ namespace NetEFI {
 
 	};
 
+    
+    public ref class Context {
+    
+    public:
+
+        property bool IsUserInterrupted { bool get(); }
+    };
+
 
 	public interface class IFunction {
 
@@ -62,11 +70,11 @@ namespace NetEFI {
         property FunctionInfo^ Info { FunctionInfo^ get(); }        
 
 		FunctionInfo^ GetFunctionInfo( String^ lang );
-		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ % );
+		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ %, Context ^ % );
 	};
 
 
-    public ref class AssemblyInfo {
+    private ref class AssemblyInfo {
 
     public:
         String^ Path;
@@ -95,7 +103,7 @@ namespace NetEFI {
 	};
 
 
-	public ref class Manager {
+	private ref class Manager {
 
 	public:
 
