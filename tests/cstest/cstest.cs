@@ -59,7 +59,7 @@ public class cstest: IFunction {
                 result = String.Join(", ", list.ToArray());
             }
 
-        } catch ( Exception ex ) {
+        } catch {
 
             result = null;
             return false;

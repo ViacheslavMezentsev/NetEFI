@@ -44,7 +44,7 @@ public class cstest2: IFunction {
 
             result = String.Join( d, list.ToArray() );
 
-        } catch ( Exception ex ) {
+        } catch {
 
             result = null;
             return false;

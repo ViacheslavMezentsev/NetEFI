@@ -47,7 +47,7 @@ public class cstest3: IFunction {
 
             result = mat;
 
-        } catch ( Exception ex ) {
+        } catch {
 
             return false;
         }

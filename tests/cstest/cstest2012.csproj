@@ -41,6 +41,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -49,6 +50,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -79,8 +81,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\netefi.vcxproj">
-      <Project>{0f49f594-907b-49ec-bc07-a9abeb2eb2e2}</Project>
-      <Name>netefi %28Visual Studio 2008%29</Name>
+      <Project>{AB4222D4-C0D5-4623-AB87-63FAE652309D}</Project>
+      <Name>netefi</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

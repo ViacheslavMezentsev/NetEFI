@@ -46,7 +46,7 @@ LRESULT UserFunction( PVOID items[] ) {
         assemblyInfo = Manager::Assemblies[ assemblyId ];
         func = assemblyInfo->Functions[ functionId ];
 
-    } catch ( System::Exception^ ex ) {
+    } catch ( ... ) {
 
         Manager::LogError( String::Format( "assemblyId: {0}, functionId: {1}", assemblyId, functionId ) );
         return E_FAIL;
@@ -286,13 +286,13 @@ LRESULT CallbackFunction( void * out, ... ) {
 String^ Manager::AssemblyPath::get() {
 
     return ( gcnew System::Uri( Assembly::GetExecutingAssembly()->CodeBase ) )->LocalPath;
-};
+}
 
 
 String^ Manager::LogFile::get() {
 
     return Path::Combine( Path::GetDirectoryName( AssemblyPath ), gcnew String( L"log.txt" ) );
-};
+}
 
 
 void Manager::LogInfo( string text ) {
@@ -333,12 +333,11 @@ Assembly^ OnAssemblyResolve(Object^ sender, ResolveEventArgs^ args) {
 
     Manager::LogInfo( String::Format( "[OnAssemblyResolve] {0}", args->Name ) );
     
+    Assembly^ retval = nullptr;
     String^ finalPath = nullptr;
 
     // Load the assembly from the specified path
     try {
-
-        Assembly^ retval = nullptr;
 
         finalPath = args->Name->Substring(0, args->Name->IndexOf(",") ) + gcnew String( ".dll" );
 
@@ -352,14 +351,14 @@ Assembly^ OnAssemblyResolve(Object^ sender, ResolveEventArgs^ args) {
         } else {
 
             Manager::LogInfo( String::Format( "File not found: {0}", finalPath ) );
-        }
-        
-        return retval;
+        }                
 
     } catch ( System::Exception^ ex ) {
 
         Manager::LogError( String::Format( "Assembly not loaded: {0}", ex->Message ) );
     }
+
+    return retval;
 }
 
 
@@ -592,6 +591,12 @@ PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p ) {
             
         fi.nArgs = info->ArgTypes->GetLength(0);
 
+        if ( fi.nArgs == 0 ) {
+            
+            LogInfo( String::Format( "[{0}] No arguments (must be between 1 and {1}).", info->Name, MAX_ARGS ) );
+            return NULL;
+        }
+
         if ( fi.nArgs > MAX_ARGS ) {
          
             LogInfo( String::Format( "[{0}] Too many arguments: {1}. Cut to MAX_ARGS = {2}", info->Name, fi.nArgs, MAX_ARGS ) );
@@ -640,7 +645,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n ) {
     p[0] = k;
     p += sizeof( int );
 
-    * p++ = 0xA3; // mov [id], eax
+    * p++ = 0xA3; // mov [assemblyId], eax
     ( int * & ) p[0] = & assemblyId; 
     p += sizeof( int * ); 
 
@@ -649,7 +654,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n ) {
     p[0] = n;
     p += sizeof( int );
 
-    * p++ = 0xA3; // mov [id], eax
+    * p++ = 0xA3; // mov [functionId], eax
     ( int * & ) p[0] = & functionId; 
     p += sizeof( int * );         
 

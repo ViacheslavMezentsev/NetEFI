@@ -75,7 +75,7 @@ public:
                 result = String::Join( gcnew String( ", " ), list->ToArray() );
             }
 
-        } catch ( Exception^ ex ) {
+        } catch ( ... ) {
 
             result = nullptr;
             return false;
