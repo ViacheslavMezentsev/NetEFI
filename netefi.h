@@ -115,9 +115,7 @@ namespace NetEFI {
 
 	public:
 
-		Manager() {} // Конструктор
-		~Manager() {} // Деструктор
-		!Manager() {} // Финализатор
+        ~Manager() {}
 
         static List < AssemblyInfo^ > ^ Assemblies;
 

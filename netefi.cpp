@@ -1,4 +1,6 @@
-﻿// Component Extensions for Runtime Platforms
+﻿// Managed Code and DllMain
+// http://msdn.microsoft.com/en-us/library/aa290048(v=vs.71).aspx
+// Component Extensions for Runtime Platforms
 // http://msdn.microsoft.com/en-us/library/xey702bw.aspx
 // Основы миграции C++/CLI
 // http://msdn.microsoft.com/ru-ru/library/ms235289.aspx
@@ -417,7 +419,7 @@ void PrepareManagedCode() {
     currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
 }
 
-
+// TODO: VirtualFreeEx (?)
 bool Manager::Initialize() {
 
     // Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
@@ -428,12 +430,12 @@ bool Manager::Initialize() {
 
     // Рассчёт необходимого размера динамической памяти в зависимости от
     // максимального числа поддерживаемых функций.
-    size_t Size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE; 
+    size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE; 
 
-    pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, Size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
+    ::pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );    
 
     // TODO: Обработка кодов ошибок.
-    if ( pCode == NULL ) {
+    if ( ::pCode == NULL ) {
         
         LogInfo( "VirtualAllocEx() failed." );
         return false;
@@ -693,7 +695,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n ) {
     p += sizeof( int );
 
     * p++ = 0xA3; // mov [assemblyId], eax
-    ( int * & ) p[0] = & assemblyId; 
+    ( int * & ) p[0] = & ::assemblyId; 
     p += sizeof( int * ); 
 
     // Пересылка константы (номера функции) в глобальную переменную.
@@ -702,7 +704,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n ) {
     p += sizeof( int );
 
     * p++ = 0xA3; // mov [functionId], eax
-    ( int * & ) p[0] = & functionId; 
+    ( int * & ) p[0] = & ::functionId; 
     p += sizeof( int * );         
 
     // jmp to CallbackFunction. 
@@ -778,7 +780,7 @@ bool Manager::LoadAssemblies() {
 
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( assembly->GetType( type->ToString() ) ) );
+                    assemblyInfo->Functions->Add( ( IFunction^ ) Activator::CreateInstance( type ) );
 
                     // Проверяем наличие таблицы с сообщениями об обшибках.
                     if ( assemblyInfo->Errors != nullptr ) continue;

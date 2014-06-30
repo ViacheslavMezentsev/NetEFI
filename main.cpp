@@ -14,6 +14,8 @@ bool LoadAssemblies() {
 
 #pragma unmanaged
 
+// Common Language Runtime Loader and DllMain
+// http://msdn.microsoft.com/en-us/library/aa290048(v=vs.71).aspx
 BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) {
 
     switch ( dwReason ) {
@@ -34,6 +36,7 @@ BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved
 
         // DLL отключается от адресного пространства процесса
         case DLL_PROCESS_DETACH: { break; }
+
     }
 
     return TRUE; // используется только для DLL_PROCESS_ATTACH
