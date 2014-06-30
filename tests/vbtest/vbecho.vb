@@ -26,6 +26,7 @@ Public Class vbecho
         result = args(0)
 
         Return True
+
     End Function
 
 End Class

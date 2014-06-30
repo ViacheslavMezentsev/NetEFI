@@ -2,6 +2,8 @@
 // http://msdn.microsoft.com/en-us/library/xey702bw.aspx
 // Основы миграции C++/CLI
 // http://msdn.microsoft.com/ru-ru/library/ms235289.aspx
+// C++/CLI Tasks
+// http://msdn.microsoft.com/ru-ru/library/hh875047.aspx
 
 #include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
@@ -287,6 +289,44 @@ LRESULT CallbackFunction( void * out, ... ) {
 bool Context::IsUserInterrupted::get() {
 
     return ::isUserInterrupted == NULL ? false : ::isUserInterrupted();
+}
+    
+
+bool Context::IsDefined( String^ name ) {
+
+    return default[ name ] != nullptr;
+}
+
+
+IFunction^ Context::default::get( String^ name  ) {
+
+    IFunction^ res = nullptr;
+
+    for each ( AssemblyInfo^ assembly in Manager::Assemblies ) {
+
+        for each ( IFunction^ func in assembly->Functions ) {
+
+            if ( func->Info->Name->Equals( name ) ) {
+                
+                res = func;
+                break;
+
+            } else {
+
+                continue;
+            }            
+        }
+
+        if ( res != nullptr ) break;
+    }
+
+    return res;
+}
+
+
+void Context::LogInfo( String^ text ) {
+
+    Manager::LogInfo( text );
 }
 
 
@@ -681,6 +721,8 @@ bool Manager::LoadAssemblies() {
         Manager::Assemblies = gcnew List < AssemblyInfo^ >();
 
 #ifdef _DEBUG
+
+        LogInfo( "[netefi] Debug mode" );
 
         AssemblyInfo^ assemblyInfo = gcnew AssemblyInfo();
         assemblyInfo->Path = AssemblyPath;
