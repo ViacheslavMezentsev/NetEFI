@@ -16,9 +16,20 @@ public class csecho: IFunction {
 
     public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
 
-        result = args[0];
+        if ( context.IsDefined( "vbecho" ) ) {
+
+            context[ "vbecho" ].NumericEvaluation( args, out result, ref context );
+
+        } else {
+
+            result = Evaluate( ( string ) args[0] );
+        }        
 
         return true;
     }
 
+    public string Evaluate( string text ) {
+
+        return text;
+    }
 }

@@ -58,12 +58,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="csdec.cs" />
+    <Compile Include="csenc.cs" />
+    <Compile Include="csmix.cs" />
     <Compile Include="cserror.cs" />
+    <Compile Include="cssum.cs" />
+    <Compile Include="cstable.cs" />
     <Compile Include="cstest.cs" />
     <Compile Include="cstest1.cs" />
     <Compile Include="cstest2.cs" />
     <Compile Include="cstest3.cs" />
     <Compile Include="csecho.cs" />
+    <Compile Include="cstranspose.cs" />
     <Compile Include="errors.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

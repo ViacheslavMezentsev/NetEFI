@@ -78,6 +78,7 @@
   <ItemGroup>
     <ClInclude Include="cppecho.h" />
     <ClInclude Include="cpperror.h" />
+    <ClInclude Include="cppsum.h" />
     <ClInclude Include="cpptest.h" />
     <ClInclude Include="Stdafx.h" />
   </ItemGroup>

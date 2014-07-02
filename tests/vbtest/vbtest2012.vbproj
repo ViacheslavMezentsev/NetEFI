@@ -71,6 +71,7 @@
     <Compile Include="errors.vb" />
     <Compile Include="vbecho.vb" />
     <Compile Include="vberror.vb" />
+    <Compile Include="vbsum.vb" />
     <Compile Include="vbtest.vb" />
     <Compile Include="vbtest1.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
