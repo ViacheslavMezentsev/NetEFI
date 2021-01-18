@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+
+#include <msclr\marshal_cppstd.h>
 
 using namespace System;
 using namespace System::IO;
@@ -10,14 +12,10 @@ using namespace System::Collections::Generic;
 
 using namespace msclr::interop;
 
-void LogInfo( std::string text );
-void LogError( std::string text );
-LRESULT GlobalFunction( void * out, ... );
-
 namespace NetEFI
 {
-    public ref class EFIException: Exception
-    {      
+    public ref class EFIException : Exception
+    {
     public:
 
         int ArgNum;
@@ -30,17 +28,17 @@ namespace NetEFI
         }
     };
 
-	public ref class FunctionInfo
+    public ref class FunctionInfo
     {
-	public:
+    public:
 
-		String^ Name;
-		String^ Parameters; 
-		String^ Description;
-		Type^ ReturnType;
-		array < Type^ > ^ ArgTypes;
+        String ^ Name;
+        String ^ Parameters;
+        String ^ Description;
+        Type ^ ReturnType;
+        array < Type ^ > ^ ArgTypes;
 
-        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes )
+        FunctionInfo( String ^ name, String ^ params, String ^ descr, Type ^ returnType, array < Type ^ > ^ argTypes )
         {
             Name = name;
             Parameters = params;
@@ -48,40 +46,25 @@ namespace NetEFI
             ReturnType = returnType;
             ArgTypes = argTypes;
         }
-	};
+    };
 
     ref class Context;
 
     public interface class IFunction
     {
-	public:
-
-        property FunctionInfo^ Info { FunctionInfo^ get(); }        
-
-		FunctionInfo^ GetFunctionInfo( String^ lang );
-		bool NumericEvaluation( array < Object^ > ^, [Out] Object ^ %, Context ^ % );
-	};
-
-    
-    public ref class Context
-    {    
     public:
 
-        property bool IsUserInterrupted { bool get(); }        
-        property IFunction^ default[ String^ ] { IFunction^ get( String^ ); }
+        property FunctionInfo ^ Info { FunctionInfo ^ get(); }
 
-    public:
-
-        bool IsDefined( String^ );
-        void LogInfo( String^ );
+        FunctionInfo ^ GetFunctionInfo( String ^ lang );
+        bool NumericEvaluation( array < Object ^ > ^, [ Out ] Object ^%, Context ^% );
     };
-
 
     public ref class AssemblyInfo
     {
     public:
-        String^ Path;
-        List < IFunction^ > ^ Functions;
+        String ^ Path;
+        List < IFunction ^ > ^ Functions;
         array < String ^ > ^ Errors;
     };
 }

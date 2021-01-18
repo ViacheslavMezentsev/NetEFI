@@ -1,32 +1,35 @@
 #pragma once
 
-public ref class TComplex
+namespace NetEFI
 {
-private:
-	double _imaginary;
-	double _real;
-
-public:
-	property double Imaginary
+	public ref class TComplex
 	{
-		double get()
+	private:
+		double _imaginary;
+		double _real;
+
+	public:
+		property double Imaginary
 		{
-			return _imaginary;
+			double get()
+			{
+				return _imaginary;
+			}
 		}
-	}
 
-	property double Real
-	{ 
-		double get()
-		{ 
-			return _real;
+		property double Real
+		{
+			double get()
+			{
+				return _real;
+			}
 		}
-	}
 
-public:
-	TComplex( double real, double imaginary )
-	{
-		_real = real;
-		_imaginary = imaginary;
-	}
-};
+	public:
+		TComplex( double real, double imaginary )
+		{
+			_real = real;
+			_imaginary = imaginary;
+		}
+	};
+}

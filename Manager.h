@@ -2,91 +2,70 @@
 
 #include "netefi.h"
 
-using namespace System;
-using namespace System::IO;
-using namespace System::Text;
-using namespace System::Reflection;
-using namespace System::Runtime::InteropServices;
-using namespace System::Globalization;
-using namespace System::Collections::Generic;
-
-using namespace msclr::interop;
-
-using namespace NetEFI;
-
-public ref class Manager
+namespace NetEFI
 {
-private:
-    static void Log( String ^, ... array<Object ^> ^ );
-
-public:
-
-    ~Manager() {}
-
-    static List < AssemblyInfo ^ > ^ Assemblies;
-
-    static property Assembly ^ ExecAssembly
+    public ref class Manager
     {
-        Assembly ^ get()
+    private:
+        static void Log( String ^, ... array<Object ^> ^ );
+        static bool IsManagedAssembly( String ^ );        
+        static PVOID CreateUserFunction( FunctionInfo ^, PVOID );
+        static void CreateUserErrorMessageTable( array < String ^ > ^ );
+        static void InjectCode( PBYTE &, int, int );
+
+    public:
+
+        ~Manager() {}
+
+        static List < AssemblyInfo ^ > ^ Assemblies;
+
+        static property Assembly ^ ExecAssembly
         {
-            return Assembly::GetExecutingAssembly();
+            Assembly ^ get()
+            {
+                return Assembly::GetExecutingAssembly();
+            };
         };
-    };
 
-    static property String ^ AssemblyDirectory
-    {
-        String ^ get()
+        static property String ^ AssemblyDirectory
         {
-            return Path::GetDirectoryName( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath );
+            String ^ get()
+            {
+                return Path::GetDirectoryName( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath );
+            };
         };
-    };
 
-    static property String ^ AssemblyFileName
-    {
-        String ^ get()
+        static property String ^ AssemblyFileName
         {
-            return Path::GetFileName( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath );
+            String ^ get()
+            {
+                return Path::GetFileName( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath );
+            };
         };
-    };
 
-    static property String ^ MathcadAppData
-    {
-        String ^ get()
+        static property String ^ MathcadAppData
         {
-            return Path::Combine( Environment::GetFolderPath( Environment::SpecialFolder::ApplicationData ), "Mathsoft\\Mathcad" );
+            String ^ get()
+            {
+                return Path::Combine( Environment::GetFolderPath( Environment::SpecialFolder::ApplicationData ), "Mathsoft\\Mathcad" );
+            };
         };
-    };
 
-    static property String ^ LogFile
-    {
-        String ^ get()
+        static property String ^ LogFile
         {
-            return Path::Combine( MathcadAppData, Path::GetFileNameWithoutExtension( AssemblyFileName ) + ".log" );
+            String ^ get()
+            {
+                return Path::Combine( MathcadAppData, Path::GetFileNameWithoutExtension( AssemblyFileName ) + ".log" );
+            };
         };
+
+
+    public:
+
+        static void LogInfo( String ^ format, ... array<Object ^> ^ list ) { Log( "[INFO ] " + format, list ); }
+        static void LogError( String ^ format, ... array<Object ^> ^ list ) { Log( "[ERROR] " + format, list ); }
+
+        static bool LoadAssemblies();
+        static bool Initialize();
     };
-
-
-public:
-
-    // Ведение журнала сообщений.
-    static void LogInfo( String ^, ... array<Object ^> ^ );
-    static void LogError( String ^, ... array<Object ^> ^ );
-
-    static void LogInfo( std::string );
-    static void LogError( std::string );
-
-    // Проверка типа библиотеки.
-    static bool IsManagedAssembly( String ^ );
-
-    // Настройка менеджера.
-    static bool Initialize();
-
-    // Загрузка пользовательских сборок.
-    static bool LoadAssemblies();
-
-    static PVOID CreateUserFunction( FunctionInfo ^, PVOID );
-
-    static void CreateUserErrorMessageTable( array < String ^ > ^ );
-
-    static void InjectCode( PBYTE &, int, int );
-};
+}
