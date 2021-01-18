@@ -8,33 +8,30 @@ using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
 using namespace System::Collections::Generic;
 
-using namespace std;
 using namespace msclr::interop;
 
-
-void LogInfo( string text );
-void LogError( string text );
+void LogInfo( std::string text );
+void LogError( std::string text );
 LRESULT GlobalFunction( void * out, ... );
 
-
-namespace NetEFI {
-
-    public ref class EFIException: Exception {
-      
+namespace NetEFI
+{
+    public ref class EFIException: Exception
+    {      
     public:
 
         int ArgNum;
         int ErrNum;
 
-        EFIException( int errNum, int argNum ) {
-
+        EFIException( int errNum, int argNum )
+        {
             ErrNum = errNum;
             ArgNum = argNum;
         }
     };
 
-	public ref class FunctionInfo {
-
+	public ref class FunctionInfo
+    {
 	public:
 
 		String^ Name;
@@ -43,21 +40,20 @@ namespace NetEFI {
 		Type^ ReturnType;
 		array < Type^ > ^ ArgTypes;
 
-        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes ){
-
+        FunctionInfo( String^ name, String^ params, String^ descr, Type^ returnType, array < Type^ > ^ argTypes )
+        {
             Name = name;
             Parameters = params;
             Description = descr;
             ReturnType = returnType;
             ArgTypes = argTypes;
         }
-
 	};
 
     ref class Context;
 
-    public interface class IFunction {
-
+    public interface class IFunction
+    {
 	public:
 
         property FunctionInfo^ Info { FunctionInfo^ get(); }        
@@ -67,12 +63,11 @@ namespace NetEFI {
 	};
 
     
-    public ref class Context {
-    
+    public ref class Context
+    {    
     public:
 
         property bool IsUserInterrupted { bool get(); }        
-
         property IFunction^ default[ String^ ] { IFunction^ get( String^ ); }
 
     public:
@@ -82,72 +77,11 @@ namespace NetEFI {
     };
 
 
-    private ref class AssemblyInfo {
-
+    public ref class AssemblyInfo
+    {
     public:
         String^ Path;
         List < IFunction^ > ^ Functions;
         array < String ^ > ^ Errors;
     };
-
-
-	public ref class TComplex {
-
-	private:
-		double _imaginary;
-		double _real;
-
-	public:
-		property double Imaginary { double get() { return _imaginary; } }
-		property double Real { double get() { return _real; } }
-
-	public:
-		TComplex( double real, double imaginary ) {
-
-			_real = real;
-			_imaginary = imaginary;
-		}
-
-	};
-
-
-	private ref class Manager {
-
-	public:
-
-        ~Manager() {}
-
-        static List < AssemblyInfo^ > ^ Assemblies;
-
-        static property String^ AssemblyPath { String^ get(); };
-		static property String^ LogFile { String^ get(); };
-
-	public:
-        
-		// Вывод информационных сообщений.
-		static void LogInfo( String^ );
-
-        static void LogInfo( string );
-
-        // Вывод сообщений об ошибках.
-		static void LogError( String^ );
-
-        static void LogError( string );
-
-        // Проверка типа библиотеки.
-        static bool IsManagedAssembly( String^ );
-
-        // Настройка менеджера.
-        static bool Initialize();
-
-		// Загрузка пользовательских сборок.
-		static bool LoadAssemblies();	
-
-        static PVOID CreateUserFunction( FunctionInfo^, PVOID );
-
-        static void CreateUserErrorMessageTable( array < String ^ > ^ );
-
-        static void InjectCode( PBYTE &, int, int );
-	};
-
 }

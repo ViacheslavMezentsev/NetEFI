@@ -4,51 +4,41 @@ using System.Reflection;
 
 using NetEFI;
 
+public class cstest: IFunction
+{
+    public FunctionInfo Info { get; }
 
-public class cstest: IFunction {
-
-    private FunctionInfo _info;
-
-    public FunctionInfo Info {
-
-        get { return _info; }
-    }
-
-    public cstest() {
-
-        _info = new FunctionInfo(
-
+    public cstest()
+    {
+        Info = new FunctionInfo(
             "cstest", "cmd", "return info",            
-            typeof( String ),
-            new[] { typeof( String ) }
+            typeof( string ),
+            new[] { typeof( string ) }
             );
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) {
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-        return Info;
-    }
-
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
-        try {
-
-            var cmd = ( String ) args[0];
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
+        try
+        {
+            var cmd = ( string ) args[0];
 
             result = "empty";
 
-            if (cmd.Equals("info")) {
-
+            if ( cmd.Equals( "info" ) )
+            {
                 result = Assembly.GetExecutingAssembly().ToString();
-
-            } else if (cmd.Equals("list")) {
-
+            }
+            else if ( cmd.Equals( "list" ) )
+            {
                 var list = new List<string>();
 
                 var types = Assembly.GetExecutingAssembly().GetTypes();
 
-                foreach ( var type in types ) {
-
+                foreach ( var type in types )
+                {
                     if ( !type.IsPublic || type.IsAbstract || !typeof(IFunction).IsAssignableFrom( type ) ) continue;
 
                     var f = ( IFunction ) Activator.CreateInstance( type );
@@ -56,16 +46,15 @@ public class cstest: IFunction {
                     list.Add( f.Info.Name );
                 }
 
-                result = String.Join(", ", list.ToArray());
+                result = string.Join(", ", list.ToArray());
             }
-
-        } catch {
-
+        }
+        catch
+        {
             result = null;
             return false;
         }
 
         return true;
     }
-
 }

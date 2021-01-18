@@ -22,18 +22,18 @@ Public Class vbtest
             New Type() {GetType(String)})
     End Sub
 
-    Public Function GetFunctionInfo(ByVal lang As String) As FunctionInfo _
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo _
         Implements IFunction.GetFunctionInfo
 
         Return Info
     End Function
 
-    Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
         Try
 
-            Dim cmd = CType(args(0), [String])
+            Dim cmd = CType(args(0), String)
 
             result = "empty"
 
@@ -58,7 +58,7 @@ Public Class vbtest
                     list.Add(f.Info.Name)
                 Next
 
-                result = [String].Join(", ", list.ToArray())
+                result = String.Join(", ", list.ToArray())
 
             End If
 

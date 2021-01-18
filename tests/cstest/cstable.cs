@@ -1,53 +1,49 @@
-﻿using System;
-using NetEFI;
+﻿using NetEFI;
 using System.Collections.Generic;
 
-
-public class cstable: IFunction {
-
-    public FunctionInfo Info {
-
-        get { 
+public class cstable: IFunction
+{
+    public FunctionInfo Info
+    {
+        get
+        { 
             return new FunctionInfo(
-
-            "cstable", "x", "return table of frequenses n x m",
-            typeof( TComplex[,] ),
-            new[] {typeof( TComplex ) }
+                "cstable", "x", "return table of frequenses n x m",
+                typeof( TComplex[,] ),
+                new[] {typeof( TComplex ) }
             );
         }
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
     // Find minimum  Number in the Array 
-    private double Min( double[] value ) {
-
+    private double Min( double[] value )
+    {
         var min = value[0];
 
-        for ( var i = 1; i < value.Length; i++ ) {
-
-            if ( value[i] < min ) {
-
+        for ( var i = 1; i < value.Length; i++ )
+        {
+            if ( value[i] < min )
+            {
                 min = value[i];
             }
-
         }
 
         return min;
     }
 
     // Find maximum  Number in the Array 
-    private double Max( double[] value) {
-
+    private double Max( double[] value )
+    {
         var max = value[0];
 
-        for ( var i = 1; i < value.Length; i++ ) {
-         
-            if ( value[i] > max ) {
-
+        for ( var i = 1; i < value.Length; i++ )
+        {
+            if ( value[i] > max )
+            {
                 max = value[i];
             }
-
         }
 
         return max;
@@ -57,8 +53,8 @@ public class cstable: IFunction {
 
     // A faster Marsaglia's Xorshift pseudo-random generator in unsafe C#
     // http://roman.st/Article/Faster-Marsaglia-Xorshift-pseudo-random-generator-in-unsafe-C
-    byte NextByte() {
-
+    byte NextByte()
+    {
         uint t = x ^ ( x << 11 );
 
         x = y; y = z; z = w;
@@ -67,8 +63,8 @@ public class cstable: IFunction {
         return ( byte ) ( w & 0xFF );
     }
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
         x = 1;
         y = 0;
         z = 0;
@@ -82,13 +78,13 @@ public class cstable: IFunction {
 
         var list = new List<List<int>>();
 
-        for ( k = 0; k < 256 * 256; k++ ) {
-
+        for ( k = 0; k < 256 * 256; k++ )
+        {
             list.Add( new List<int>() );
         }
 
-        for ( k = 0; k < 256 * 256; k++ ) {
-
+        for ( k = 0; k < 256 * 256; k++ )
+        {
             var classid = nums[k + 0] >> 6;
 
             classid += ( nums[k + 1] >> 6 ) << 2;
@@ -110,8 +106,8 @@ public class cstable: IFunction {
 
         var res = new TComplex[ 256 * 256, 1 ];
 
-        for ( k = 0; k < 256 * 256; k++ ) {
-
+        for ( k = 0; k < 256 * 256; k++ )
+        {
             res[ k, 0 ] = new TComplex( list[k].Count, 0 );
         }
 
@@ -119,5 +115,4 @@ public class cstable: IFunction {
 
         return true;
     }
-
 }

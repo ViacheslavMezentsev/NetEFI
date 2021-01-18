@@ -1,23 +1,22 @@
-﻿using System;
-using NetEFI;
+﻿using NetEFI;
 
+public class csenc: IFunction
+{
 
-public class csenc: IFunction {
-
-    public FunctionInfo Info {
-
-        get {
-            return new FunctionInfo( "csenc", "m", "encoder",
-                typeof( TComplex[,] ), new[] { typeof( TComplex[,] ) } );
+    public FunctionInfo Info
+    {
+        get
+        {
+            return new FunctionInfo( "csenc", "m", "encoder", typeof( TComplex[,] ), new[] { typeof( TComplex[,] ) } );
         }
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
-        var N = ( ( TComplex[,] ) args[0] ).GetLength( 0 );
-        var M = ( ( TComplex[,] ) args[0] ).GetLength( 1 );
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
+        var N = ( ( TComplex[,] ) args[0] ).GetLength(0);
+        var M = ( ( TComplex[,] ) args[0] ).GetLength(1);
 
         var bytes = new byte[ N * M ];
 
@@ -25,8 +24,8 @@ public class csenc: IFunction {
 
         for ( var n = 0; n < N; n++ )
 
-            for ( var m = 0; m < M; m++ ) {
-
+            for ( var m = 0; m < M; m++ )
+            {
                 bytes[k] = ( byte ) ( ( TComplex[,] ) args[0] )[n, m].Real;
                 k++;
             }
@@ -35,8 +34,8 @@ public class csenc: IFunction {
 
         var res = new TComplex[count, 1];
 
-        for ( k = 0; k < count; k++ ) {
-
+        for ( k = 0; k < count; k++ )
+        {
             var value = bytes[8 * k + 0] >> 6;
 
             value += ( bytes[8 * k + 1] >> 6 ) << 2;
@@ -60,5 +59,4 @@ public class csenc: IFunction {
 
         return true;
     }
-
 }

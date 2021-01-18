@@ -1,5 +1,4 @@
-﻿Imports System.Reflection
-Imports NetEFI
+﻿Imports NetEFI
 
 Public Class vbtest1
     Implements IFunction
@@ -21,13 +20,13 @@ Public Class vbtest1
             New Type() {GetType(TComplex)})
     End Sub
 
-    Public Function GetFunctionInfo(ByVal lang As String) As FunctionInfo _
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo _
         Implements IFunction.GetFunctionInfo
 
         Return Info
     End Function
 
-    Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
         Try

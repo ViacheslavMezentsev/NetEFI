@@ -1,5 +1,4 @@
-﻿Imports System.Reflection
-Imports NetEFI
+﻿Imports NetEFI
 
 Public Class vbtest2
 
@@ -22,18 +21,18 @@ Public Class vbtest2
             New Type() {GetType(String), GetType(TComplex(,))})
     End Sub
 
-    Public Function GetFunctionInfo(ByVal lang As String) As FunctionInfo _
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo _
         Implements IFunction.GetFunctionInfo
 
         Return Info
     End Function
 
-    Public Function NumericEvaluation(ByVal args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
         Try
 
-            Dim d = CType(args(0), [String])
+            Dim d = CType(args(0), String)
             Dim v = CType(args(1), TComplex(,))
 
             Dim len As Integer = v.GetLength(0)
@@ -41,10 +40,10 @@ Public Class vbtest2
             Dim list = New List(Of String)()
 
             For n As Integer = 0 To len - 1
-                list.Add([String].Format("{0} + {1} * i", v(n, 0).Real, v(n, 0).Imaginary))
+                list.Add(String.Format("{0} + {1} * i", v(n, 0).Real, v(n, 0).Imaginary))
             Next
 
-            result = [String].Join(d, list.ToArray())
+            result = String.Join(d, list.ToArray())
 
         Catch ex As Exception
 

@@ -1,34 +1,31 @@
-﻿using System;
-using NetEFI;
+﻿using NetEFI;
 
-
-public class csdec: IFunction {
-
-    public FunctionInfo Info {
-
-        get {
+public class csdec: IFunction
+{
+    public FunctionInfo Info
+    {
+        get
+        {
             return new FunctionInfo( "csdec", "m", "decoder",
                 typeof( TComplex[,] ), new[] { typeof( TComplex[,] ) } );
         }
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
-        var N = ( ( TComplex[,] ) args[0] ).GetLength( 0 );
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
+        var N = ( ( TComplex[,] ) args[0] ).GetLength(0);
 
         var bytes = new int[N];
 
-        for ( var k = 0; k < N; k++ )
-
-            bytes[k] = ( int ) ( ( TComplex[,] ) args[0] )[k, 0].Real;
+        for ( var k = 0; k < N; k++ ) bytes[k] = ( int ) ( ( TComplex[,] ) args[0] )[k, 0].Real;
 
         var res = new TComplex[256, 256];
 
         for ( var n = 0; n < 256; n++ )
-            for ( var m = 0; m < 32; m++ ) {
-
+            for ( var m = 0; m < 32; m++ )
+            {
                 var value  = bytes[ n * 32 + m ];
 
                 res[ n, 8 * m + 0 ] = new TComplex( ( value & 0x0003 ) << 6, 0 );
@@ -45,5 +42,4 @@ public class csdec: IFunction {
 
         return true;
     }
-
 }

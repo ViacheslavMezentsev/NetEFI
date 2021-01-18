@@ -1,25 +1,25 @@
-﻿using System;
-using NetEFI;
+﻿using NetEFI;
 
+public class csmix: IFunction
+{
 
-public class csmix: IFunction {
-
-    public FunctionInfo Info {
-
-        get {
+    public FunctionInfo Info
+    {
+        get
+        {
             return new FunctionInfo( "csmix", "m, direction", "return mixed array",
                 typeof( TComplex[,] ), new[] { typeof( TComplex[,] ), typeof( TComplex ) } );
         }
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
     uint x = 1, y, z, w;
 
     // A faster Marsaglia's Xorshift pseudo-random generator in unsafe C#
     // http://roman.st/Article/Faster-Marsaglia-Xorshift-pseudo-random-generator-in-unsafe-C
-    byte NextByte() {
-
+    byte NextByte()
+    {
         uint t = x ^ ( x << 11 );
 
         x = y; y = z; z = w;
@@ -28,17 +28,17 @@ public class csmix: IFunction {
         return ( byte ) ( w & 0xFF );
     }
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
-        var N = ( ( TComplex[,] ) args[0] ).GetLength( 0 );
-        var M = ( ( TComplex[,] ) args[0] ).GetLength( 1 );
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
+        var N = ( ( TComplex[,] ) args[0] ).GetLength(0);
+        var M = ( ( TComplex[,] ) args[0] ).GetLength(1);
 
         var d = ( byte ) ( ( TComplex ) args[1] ).Real;
 
         var res = ( TComplex[,] ) args[0];
             
-        try {
-
+        try
+        {
             x = 1;
             y = 0;
             z = 0;
@@ -53,14 +53,14 @@ public class csmix: IFunction {
             byte i, j;
             TComplex tmp;
 
-            if ( d == 0 ) {
-
+            if ( d == 0 )
+            {
                 k = 0;
 
-                for ( var n = 0; n < N; n++ ) {
-
-                    for ( var m = 0; m < M; m++ ) {
-
+                for ( var n = 0; n < N; n++ )
+                {
+                    for ( var m = 0; m < M; m++ )
+                    {
                         i = nums[ k ];
                         j = nums[ k + 1 ];
 
@@ -71,15 +71,15 @@ public class csmix: IFunction {
                         k++;
                     }
                 }
-
-            } else {
-
+            }
+            else
+            {
                 k = 0;
 
-                for ( var n = N - 1; n >=0 ; n-- ) {
-
-                    for ( var m = M - 1; m >= 0 ; m-- ) {
-
+                for ( var n = N - 1; n >=0 ; n-- )
+                {
+                    for ( var m = M - 1; m >= 0 ; m-- )
+                    {
                         i = nums[ N * M - ( k + 1 ) ];
                         j = nums[ N * M - k ];
 
@@ -91,12 +91,11 @@ public class csmix: IFunction {
                     }
                 }
             }
-
-        } catch { }
+        }
+        catch { }
 
         result = res;
 
         return true;
     }
-
 }

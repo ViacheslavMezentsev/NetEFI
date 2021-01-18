@@ -1,41 +1,28 @@
-﻿using System;
-using System.Reflection;
+﻿using NetEFI;
 
-using NetEFI;
+public class cstest3: IFunction
+{
+    public FunctionInfo Info { get; }
 
-
-public class cstest3: IFunction {
-
-    private FunctionInfo _info;
-
-    public FunctionInfo Info {
-
-        get { return _info; }
-    }
-
-    public cstest3() {
-
-        _info = new FunctionInfo(
-
+    public cstest3()
+    {
+        Info = new FunctionInfo(
             "cstest3", "n, m", "return matrix n, m",
             typeof( TComplex[,] ),
             new[] { typeof( TComplex ), typeof( TComplex ) }
             );
     }
 
-    public FunctionInfo GetFunctionInfo( string lang ) {
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-        return Info;
-    }
-
-    public bool NumericEvaluation( object[] args, out object result, ref Context context ) {
-
+    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    {
         TComplex[,] mat = null;
 
         result = mat;
 
-        try {
-
+        try
+        {
             var n = ( int ) ( ( TComplex ) args[0] ).Real;
             var m = ( int ) ( ( TComplex ) args[1] ).Real;
 
@@ -46,13 +33,12 @@ public class cstest3: IFunction {
                     mat[r, c] = new TComplex( r, c );
 
             result = mat;
-
-        } catch {
-
+        }
+        catch
+        {
             return false;
         }
 
         return true;
     }
-
 }
