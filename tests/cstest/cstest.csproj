@@ -87,7 +87,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\netefi.vcxproj">
+    <ProjectReference Include="..\..\netefi\netefi.vcxproj">
       <Project>{0f49f594-907b-49ec-bc07-a9abeb2eb2e2}</Project>
       <Name>netefi</Name>
     </ProjectReference>
