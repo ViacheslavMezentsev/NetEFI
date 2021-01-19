@@ -14,10 +14,8 @@ int assemblyId = -1;
 int functionId = -1;
 PBYTE pCode = NULL;
 
-void Manager::Log( String ^ format, ... array<Object ^> ^ list )
+void Manager::Log( String ^ text )
 {
-    String ^ text = String::Format( format, list );
-
     text = String::Format( "{0:dd.MM.yyyy HH:mm:ss} {1}{2}", DateTime::Now, text, Environment::NewLine );
 
     try
@@ -27,6 +25,12 @@ void Manager::Log( String ^ format, ... array<Object ^> ^ list )
     catch ( ... )
     {
     }
+}
+
+
+void Manager::Log( String ^ format, ... array<Object ^> ^ list )
+{
+    Log( String::Format( format, list ) );
 }
 
 

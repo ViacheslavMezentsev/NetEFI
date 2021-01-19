@@ -14,5 +14,10 @@ namespace NetEFI
     public:
 
         bool IsDefined( String ^ );
+
+        void LogInfo( String ^ );
+        void LogInfo( String ^, ... array<Object ^> ^ );
+        void LogError( String ^ );
+        void LogError( String ^, ... array<Object ^> ^ );
     };
 }

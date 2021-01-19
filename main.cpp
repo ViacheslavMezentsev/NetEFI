@@ -2,16 +2,18 @@
 // http://msdn.microsoft.com/ru-ru/library/ms235289.aspx
 // C++/CLI Tasks.
 // http://msdn.microsoft.com/ru-ru/library/hh875047.aspx
-// Managed Code and DllMain
+// Common Language Runtime Loader and DllMain
 // http://msdn.microsoft.com/en-us/library/aa290048(v=vs.71).aspx
 // Component Extensions for Runtime Platforms
 // http://msdn.microsoft.com/en-us/library/xey702bw.aspx
+// Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
+// http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
 
 #include "stdafx.h"
 #include "netefi.h"
+#include "mcadincl.h"
 #include "TComplex.h"
 #include "Context.h"
-#include "mcadincl.h"
 #include "Manager.h"
 
 using namespace NetEFI;
@@ -38,24 +40,24 @@ Assembly ^ OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args )
     Manager::LogInfo( "[OnAssemblyResolve] {0}", args->Name );
 
     Assembly ^ retval = nullptr;
-    String ^ finalPath = nullptr;
+    String ^ path = nullptr;
 
-    // Load the assembly from the specified path
+    // Load the assembly from the specified path.
     try
     {
-        finalPath = args->Name->Substring( 0, args->Name->IndexOf( "," ) ) + gcnew String( ".dll" );
+        path = args->Name->Substring( 0, args->Name->IndexOf( "," ) ) + ".dll";
 
-        finalPath = Path::Combine( Manager::AssemblyDirectory, finalPath );
+        path = Path::Combine( Manager::AssemblyDirectory, path );
 
-        if ( File::Exists( finalPath ) )
+        if ( File::Exists( path ) )
         {
-            retval = Assembly::LoadFile( finalPath );
+            retval = Assembly::LoadFile( path );
 
-            Manager::LogInfo( "Assembly loaded: {0}", finalPath );
+            Manager::LogInfo( "Assembly loaded: {0}", path );
         }
         else
         {
-            Manager::LogInfo( "File not found: {0}", finalPath );
+            Manager::LogInfo( "Assembly not found: {0}", path );
         }
     }
     catch ( System::Exception ^ ex )
@@ -78,22 +80,15 @@ void PrepareManagedCode()
 
 bool LoadAssemblies()
 {
-    // Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
-    // http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
     PrepareManagedCode();
 
     return Manager::Initialize() ? Manager::LoadAssemblies() : false;
 }
 
 
-// Обобщённая функция.
+// General function.
 LRESULT UserFunction( PVOID items[] )
-{
-    MCSTRING * pmcString;
-    COMPLEXSCALAR * pmcScalar;
-    COMPLEXARRAY * pmcArray;
-
-    Type ^ type;
+{   
     AssemblyInfo ^ assemblyInfo = nullptr;
     IFunction ^ func = nullptr;
 
@@ -110,13 +105,19 @@ LRESULT UserFunction( PVOID items[] )
         return E_FAIL;
     }
 
-    // Узнаём общее число параметров функции.
+    // Get the count of parameters.
     int Count = func->Info->ArgTypes->GetLength(0);
 
-    // Создаём управляемый массив параметров функции.
+    // Create an array of managed function parameters.
     array < Object ^ > ^ args = gcnew array < Object ^ >( Count );
 
-    // Преобразуем каждый тип параметра к управляемому аналогу.
+    MCSTRING * pmcString;
+    COMPLEXSCALAR * pmcScalar;
+    COMPLEXARRAY * pmcArray;
+
+    Type ^ type;
+
+    // Convert each parameter to managed type.
     for ( int n = 0; n < Count; n++ )
     {
         type = func->Info->ArgTypes[n];
@@ -177,7 +178,7 @@ LRESULT UserFunction( PVOID items[] )
         }
     }
 
-    // Вызываем функцию.
+    // Call the function.
     // TODO: Сделать вызов в отдельном потоке.
     Object ^ result;
     Context ^ context = gcnew Context();
@@ -264,14 +265,14 @@ LRESULT UserFunction( PVOID items[] )
     // COMPLEXARRAY
     else if ( type->Equals( array<TComplex ^, 2>::typeid ) )
     {
-        array<TComplex ^, 2> ^ Matrix = ( array<TComplex ^, 2> ^ ) result;
+        array<TComplex ^, 2> ^ matrix = ( array<TComplex ^, 2> ^ ) result;
 
         // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
         // ссылка на заполненную структуру COMPLEXARRAY.
         pmcArray = ( COMPLEXARRAY * ) items[0];
 
-        int rows = Matrix->GetLength(0);
-        int cols = Matrix->GetLength(1);
+        int rows = matrix->GetLength(0);
+        int cols = matrix->GetLength(1);
 
         bool bReal = false;
         bool bImag = false;
@@ -281,7 +282,7 @@ LRESULT UserFunction( PVOID items[] )
         {
             for ( int col = 0; col < cols; col++ )
             {
-                if ( ( ( TComplex ^ ) Matrix[ row, col ] )->Real != 0.0 )
+                if ( matrix[ row, col ]->Real != 0.0 )
                 {
                     bReal = true;
                     break;
@@ -296,7 +297,7 @@ LRESULT UserFunction( PVOID items[] )
         {
             for ( int col = 0; col < cols; col++ )
             {
-                if ( ( ( TComplex ^ ) Matrix[ row, col ] )->Imaginary != 0.0 )
+                if ( matrix[ row, col ]->Imaginary != 0.0 )
                 {
                     bImag = true;
                     break;
@@ -314,8 +315,8 @@ LRESULT UserFunction( PVOID items[] )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    ( ( COMPLEXARRAY * ) pmcArray )->hReal[ col ][ row ] = ( ( TComplex ^ ) Matrix[ row, col ] )->Real;
-                    ( ( COMPLEXARRAY * ) pmcArray )->hImag[ col ][ row ] = ( ( TComplex ^ ) Matrix[ row, col ] )->Imaginary;
+                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ]->Real;
+                    pmcArray->hImag[ col ][ row ] = matrix[ row, col ]->Imaginary;
                 }
             }
         }
@@ -328,7 +329,7 @@ LRESULT UserFunction( PVOID items[] )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    ( ( COMPLEXARRAY * ) pmcArray )->hReal[ col ][ row ] = ( ( TComplex ^ ) Matrix[ row, col ] )->Real;
+                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ]->Real;
                 }
             }
         }
@@ -352,13 +353,11 @@ LRESULT CallbackFunction( void * out, ... )
 }
 
 
-// Common Language Runtime Loader and DllMain
-// http://msdn.microsoft.com/en-us/library/aa290048(v=vs.71).aspx
 BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) 
 {
     switch ( dwReason )
     {
-        // DLL проецируется на адресное пространство процесса
+        // DLL проецируется на адресное пространство процесса.
         case DLL_PROCESS_ATTACH:
         { 
             try

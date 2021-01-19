@@ -7,6 +7,7 @@ namespace NetEFI
     public ref class Manager
     {
     private:
+        static void Log( String ^ );
         static void Log( String ^, ... array<Object ^> ^ );
         static bool IsManagedAssembly( String ^ );        
         static PVOID CreateUserFunction( FunctionInfo ^, PVOID );
@@ -62,7 +63,10 @@ namespace NetEFI
 
     public:
 
+        static void LogInfo( String ^ text ) { Log( "[INFO ] " + text ); }
         static void LogInfo( String ^ format, ... array<Object ^> ^ list ) { Log( "[INFO ] " + format, list ); }
+
+        static void LogError( String ^ text ) { Log( "[ERROR] " + text ); }
         static void LogError( String ^ format, ... array<Object ^> ^ list ) { Log( "[ERROR] " + format, list ); }
 
         static bool LoadAssemblies();

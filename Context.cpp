@@ -40,3 +40,27 @@ IFunction ^ Context::default::get( String ^ name )
 
     return res;
 }
+
+
+void Context::LogInfo( String ^ text )
+{ 
+    Manager::LogInfo( text );
+}
+
+
+void Context::LogInfo( String ^ format, ... array<Object ^> ^ list )
+{ 
+    Manager::LogInfo( format, list );
+}
+
+
+void Context::LogError( String ^ text )
+{ 
+    Manager::LogError( text );
+}
+
+
+void Context::LogError( String ^ format, ... array<Object ^> ^ list )
+{ 
+    Manager::LogError( format, list );
+}
