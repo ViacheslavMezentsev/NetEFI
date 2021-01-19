@@ -60,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="csdec.cs" />
+    <Compile Include="csrfile.cs" />
     <Compile Include="csenc.cs" />
     <Compile Include="csmix.cs" />
     <Compile Include="cserror.cs" />

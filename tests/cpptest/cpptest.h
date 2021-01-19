@@ -12,8 +12,8 @@ using namespace std;
 using namespace NetEFI;
 
 
-public ref class cpptest: public IFunction {
-
+public ref class cpptest: public IFunction
+{
 private:
     FunctionInfo ^ info;
 
@@ -23,15 +23,18 @@ protected:
 
 public:
 
-    virtual property FunctionInfo^ Info {
-
-        FunctionInfo^ get() { return info; }
+    virtual property FunctionInfo^ Info
+    {
+        FunctionInfo^ get()
+        { 
+            return info;
+        }
     }
 
     !cpptest() {}
 
-    cpptest() {
-
+    cpptest()
+    {
 		info = gcnew FunctionInfo(
                 
             "cpptest", "cmd", "return info",            
@@ -40,31 +43,31 @@ public:
         );
     }
 
-    virtual FunctionInfo^ GetFunctionInfo(String^ lang) {
-
+    virtual FunctionInfo^ GetFunctionInfo(String^ lang)
+    {
         return info;
     }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context ) {            
-
-        try {
-
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
+    {
+        try
+        {
             String^ cmd = ( String^ ) args[0];
 
             result = gcnew String( "empty" );
 
-            if ( cmd->Equals( gcnew String("info") ) ) {
-
+            if ( cmd->Equals( gcnew String("info") ) )
+            {
                 result = Assembly::GetExecutingAssembly()->ToString();
-
-            } else if ( cmd->Equals( gcnew String("list") ) ) {
-
+            }
+            else if ( cmd->Equals( gcnew String("list") ) )
+            {
                 List<String^>^ list = gcnew List<String^>();
 
                 array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
 
-                for each ( Type^ type in types ) {
-
+                for each ( Type^ type in types )
+                {
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
                     IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
@@ -74,15 +77,13 @@ public:
 
                 result = String::Join( gcnew String( ", " ), list->ToArray() );
             }
-
-        } catch ( ... ) {
-
+        }
+        catch ( ... )
+        {
             result = nullptr;
             return false;
         }
 
         return true;
     }
-
 };
-

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <msclr\marshal_cppstd.h>
-
 using namespace System;
 using namespace System::IO;
 using namespace System::Text;
@@ -9,8 +7,6 @@ using namespace System::Reflection;
 using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
 using namespace System::Collections::Generic;
-
-using namespace msclr::interop;
 
 namespace NetEFI
 {

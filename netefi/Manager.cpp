@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include <msclr\marshal_cppstd.h>
 #include "TComplex.h"
 #include "test.h"
 #include "Manager.h"
+
+using namespace msclr::interop;
 
 using namespace NetEFI;
 
@@ -368,6 +371,7 @@ bool Manager::LoadAssemblies()
         if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
 
 #else
+
         // Получаем список всех библиотек в текущей папке.
         array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, gcnew String( "*.dll" ) );
 
@@ -415,6 +419,7 @@ bool Manager::LoadAssemblies()
                 continue;
             }
         }
+
 #endif
 
         // Теперь регистрируем все функции в Mathcad.        

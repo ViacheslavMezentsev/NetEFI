@@ -70,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="errors.vb" />
+    <Compile Include="vbrfile.vb" />
     <Compile Include="vbecho.vb" />
     <Compile Include="vberror.vb" />
     <Compile Include="vbsum.vb" />

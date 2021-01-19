@@ -10,11 +10,14 @@
 // http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
 
 #include "stdafx.h"
+#include <msclr\marshal_cppstd.h>
 #include "netefi.h"
 #include "mcadincl.h"
 #include "TComplex.h"
 #include "Context.h"
 #include "Manager.h"
+
+using namespace msclr::interop;
 
 using namespace NetEFI;
 
@@ -123,12 +126,24 @@ LRESULT UserFunction( PVOID items[] )
         type = func->Info->ArgTypes[n];
 
         // MCSTRING
-        // TODO: Преобразовывать ansi в unicode.
         if ( type->Equals( String::typeid ) )
         {
             pmcString = ( MCSTRING * ) items[ n + 1 ];
 
-            args[n] = marshal_as<String ^>( pmcString->str );
+            // It seems that Mathcad EFI supports only 7-bit ASCIIZ strings.
+            std::string text( pmcString->str );
+
+            args[n] = marshal_as<String ^>( text );
+            
+            /*
+            size_t len = strlen( pmcString->str );
+
+            array<Byte> ^ bytes = gcnew array<Byte>( len );
+
+            Marshal::Copy( IntPtr( pmcString->str ), bytes, 0, bytes->Length );
+
+            args[n] = UTF8Encoding::UTF8->GetString( bytes );           
+            */
         }
 
         // COMPLEXSCALAR
@@ -177,12 +192,11 @@ LRESULT UserFunction( PVOID items[] )
             return E_FAIL;
         }
     }
-
-    // Call the function.
-    // TODO: Сделать вызов в отдельном потоке.
+    
     Object ^ result;
     Context ^ context = gcnew Context();
 
+    // Call the user function.
     try
     {
         if ( !func->NumericEvaluation( args, result, context ) ) return E_FAIL;
@@ -228,27 +242,30 @@ LRESULT UserFunction( PVOID items[] )
         return E_FAIL;
     }
 
-    // Преобразуем результат.
+    // Convert the result.
     type = result->GetType();
 
     // MCSTRING
-    // TODO: Преобразовывать unicode в ansi.
     if ( type->Equals( String::typeid ) )
     {
-        // Выделяем память под структуру.
-        pmcString = ( MCSTRING * ) items[0];
+        pmcString = ( MCSTRING * ) items[0];      
 
-        marshal_context context;
+        std::string text = marshal_as< std::string >( ( String ^ ) result );
 
-        char * text = ( char * ) context.marshal_as<const char *>( ( String ^ ) result );
+        pmcString->str = ( char * ) ::MathcadAllocate( text.size() + 1 );
 
-        // Выделяем память для строки и завершающего нуля.
-        pmcString->str = ( char * ) ::MathcadAllocate( ::strlen( text ) + 1 );
+        ::memcpy( pmcString->str, text.c_str(), text.size() );
+        
+        // Null terminate.
+        pmcString->str[ text.size() ] = '\0';
 
-        ::memset( pmcString->str, 0, ::strlen( text ) + 1 );
+        /*
+        array<Byte> ^ bytes = Encoding::UTF8->GetBytes( ( String ^ ) result );
 
-        // Копируем строку из временной области памяти.
-        ::memcpy( pmcString->str, text, ::strlen( text ) );        
+        pmcString->str = ( char * ) ::MathcadAllocate( bytes->Length + 1 );
+
+        Marshal::Copy( bytes, 0, IntPtr( pmcString->str ), bytes->Length );
+        */
     }
 
     // COMPLEXSCALAR
