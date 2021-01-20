@@ -1,4 +1,5 @@
-﻿Imports NetEFI
+﻿Imports System.Numerics
+Imports NetEFI
 
 Public Class vbtest3
     Implements IFunction
@@ -15,9 +16,9 @@ Public Class vbtest3
 
     Public Sub New()
 
-        _info = New FunctionInfo("vbtest3", "n, m", "return matrix n, m", _
-            GetType(TComplex(,)), _
-            New Type() {GetType(TComplex), GetType(TComplex)})
+        _info = New FunctionInfo( "vbtest3", "n, m", "return matrix n x m", _
+            GetType( Complex(,) ), _
+            New Type() { GetType( Complex ), GetType( Complex ) } )
     End Sub
 
     Public Function GetFunctionInfo(lang As String) As FunctionInfo _
@@ -29,20 +30,20 @@ Public Class vbtest3
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
-        Dim mat As TComplex(,) = Nothing
+        Dim mat As Complex(,) = Nothing
 
         result = mat
 
         Try
 
-            Dim n = CInt(CType(args(0), TComplex).Real)
-            Dim m = CInt(CType(args(1), TComplex).Real)
+            Dim n = CInt( CType( args(0), Complex).Real )
+            Dim m = CInt( CType( args(1), Complex).Real )
 
-            mat = New TComplex(n - 1, m - 1) {}
+            mat = New Complex(n - 1, m - 1) {}
 
             For r As Integer = 0 To n - 1
                 For c As Integer = 0 To m - 1
-                    mat(r, c) = New TComplex(r, c)
+                    mat(r, c) = New Complex(r, c)
                 Next
             Next
 

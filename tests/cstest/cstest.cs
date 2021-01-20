@@ -6,16 +6,8 @@ using NetEFI;
 
 public class cstest: IFunction
 {
-    public FunctionInfo Info { get; }
-
-    public cstest()
-    {
-        Info = new FunctionInfo(
-            "cstest", "cmd", "return info",            
-            typeof( string ),
-            new[] { typeof( string ) }
-            );
-    }
+    public FunctionInfo Info => new FunctionInfo( "cstest", "cmd", "return info",
+        typeof( string ), new[] { typeof( string ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 

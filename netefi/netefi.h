@@ -1,6 +1,7 @@
 #pragma once
 
 using namespace System;
+using namespace System::Numerics;
 using namespace System::IO;
 using namespace System::Text;
 using namespace System::Reflection;

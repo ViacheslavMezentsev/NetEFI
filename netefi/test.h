@@ -1,73 +1,53 @@
 #pragma once
 
 #include "netefi.h"
-#include "TComplex.h"
 #include "Manager.h"
 
 namespace NetEFI
 {
     public ref class test: public IFunction
     {
-    private:
-        FunctionInfo ^ info;
-
-    protected:
-
-        ~test() {}
-
     public:
 
         virtual property FunctionInfo^ Info
         {
             FunctionInfo^ get()
             { 
-                return info;
+                return gcnew FunctionInfo( "test", "", "test(x, y)",
+                    array<Complex ^, 2>::typeid, gcnew array<Type ^> { Complex::typeid, String::typeid } );
             }
         }
 
-        !test() {}
-
-        test() {
-
-			info = gcnew FunctionInfo( "test", "", "test(x, y)",
-                array<TComplex^,2>::typeid,
-                gcnew array<Type^> { TComplex::typeid, String::typeid }
-            );
-        }
-
-        virtual FunctionInfo^ GetFunctionInfo( String^ lang )
-        {
-            return info;
-        }
+        virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
 
         virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % )
         {
-            //TComplex^ arg1 = ( TComplex^ ) args[0];
+            //Complex^ arg1 = ( Complex^ ) args[0];
 
-            //result = gcnew TComplex( arg1->Real + 10, arg1->Imaginary + 10 );
+            //result = gcnew Complex( arg1->Real + 10, arg1->Imaginary + 10 );
 
-            array<TComplex^,2>^ m;
+            array<Complex^,2>^ m;
 
             try
             {
-                TComplex^ n = ( TComplex^ ) args[0];
+                Complex^ n = ( Complex^ ) args[0];
                 String^ text = ( String^ ) args[1];
 
                 Manager::LogInfo( String::Format( "{0}, {1}", n->Real, text ) );
 
-                m = gcnew array<TComplex^,2>( ( int ) n->Real, ( int ) n->Real );
+                m = gcnew array<Complex^,2>( ( int ) n->Real, ( int ) n->Real );
 
                 //result = gcnew String( text );
 
                 //Manager::LogInfo( String::Format( "{0}, {1}", arg1->Real, arg1->Imaginary ) );
 
-                //array<TComplex^,2>^ m = gcnew array<TComplex^,2>( n->Real, n->Real );
+                //array<Complex^,2>^ m = gcnew array<Complex^,2>( n->Real, n->Real );
 
                 for ( int r = 0; r < m->GetLength(0); r++ )
                 {
                     for ( int c = 0; c < m->GetLength(1); c++ )
                     {
-                        m[r, c] = gcnew TComplex( r, c );
+                        m[r, c] = gcnew Complex( r, c );
                     }
                 }
             } catch ( Exception^ ex )

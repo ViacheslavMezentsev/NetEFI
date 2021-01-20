@@ -4,5 +4,6 @@
 
 #include "cpptest.h"
 #include "cppecho.h"
+#include "cppsum.h"
 #include "cpperror.h"
 

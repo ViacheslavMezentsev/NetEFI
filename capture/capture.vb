@@ -1,4 +1,5 @@
-﻿Imports System.Windows.Forms
+﻿Imports System.Numerics
+Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Drawing.Imaging
 
@@ -17,8 +18,8 @@ Namespace Capture
 
             Get
                 Return New FunctionInfo( "capture", "n", "take a snapshot from the usb webcam", _
-                    GetType(TComplex(,)),
-                    New Type() {GetType(TComplex)} )
+                    GetType(Complex(,)),
+                    New Type() {GetType(Complex)} )
             End Get
 
         End Property
@@ -29,7 +30,7 @@ Namespace Capture
             Return Info
         End Function
 
-        Private Function RGB( matimg As Bitmap ) As TComplex(,)
+        Private Function RGB( matimg As Bitmap ) As Complex(,)
 
             ' Проверяем формат изображения.
             If ( matimg.PixelFormat <> PixelFormat.Format24bppRgb ) AndAlso ( matimg.PixelFormat <> PixelFormat.Format32bppRgb ) Then
@@ -58,7 +59,7 @@ Namespace Capture
             Dim height = matimg.Height
             Dim width = matimg.Width
 
-            Dim matrix As TComplex(,) = New TComplex( height - 1, 3 * width - 1 ) {}
+            Dim matrix As Complex(,) = New Complex( height - 1, 3 * width - 1 ) {}
 
             For y = 0 To height - 1
 
@@ -78,15 +79,15 @@ Namespace Capture
                     ' Порядок определяется форматом Bitmap - [BGR].
 
                     ' B
-                    matrix( y, 2 * width + x ) = New TComplex( rgbValues( index ), 0 )
+                    matrix( y, 2 * width + x ) = New Complex( rgbValues( index ), 0 )
                     index += 1
 
                     ' G
-                    matrix( y, width + x ) = New TComplex( rgbValues( index ), 0 )
+                    matrix( y, width + x ) = New Complex( rgbValues( index ), 0 )
                     index += 1
 
                     ' R
-                    matrix( y, x ) = New TComplex( rgbValues( index ), 0 )
+                    matrix( y, x ) = New Complex( rgbValues( index ), 0 )
 
                 Next
 
@@ -99,15 +100,15 @@ Namespace Capture
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
-            Dim mat As TComplex(,)
+            Dim mat As Complex(,)
 
             Try
 
-                Dim deviceId As Integer = CType(args(0), TComplex).Real
+                Dim deviceId As Integer = CType(args(0), Complex).Real
 
-                mat = New TComplex(0, 0) {}
+                mat = New Complex(0, 0) {}
 
-                mat(0, 0) = New TComplex(0, 0)
+                mat(0, 0) = New Complex(0, 0)
 
                 result = mat
 

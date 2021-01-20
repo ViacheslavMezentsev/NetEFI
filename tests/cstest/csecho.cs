@@ -1,16 +1,9 @@
-﻿using System;
-using NetEFI;
+﻿using NetEFI;
 
 
 public class csecho: IFunction
 {
-    public FunctionInfo Info
-    {
-        get
-        { 
-            return new FunctionInfo(  "csecho", "s", "return string", typeof( string ), new[] { typeof( string ) } );
-        }
-    }
+    public FunctionInfo Info => new FunctionInfo( "csecho", "s", "return string", typeof( string ), new[] { typeof( string ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
 

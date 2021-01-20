@@ -9,7 +9,7 @@ Public Class vbecho
 
         Get
             Return New FunctionInfo("vbecho", "s", "return string", _
-                GetType([String]), New Type() {GetType([String])})
+                GetType(String), New Type() {GetType(String)})
         End Get
 
     End Property

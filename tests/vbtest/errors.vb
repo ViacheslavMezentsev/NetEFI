@@ -1,6 +1,6 @@
 ﻿Partial Public Class vberror
 
-    Public Shared Errors As [String]() = _
+    Public Shared Errors As String() = _
     { _
         "vberror 1", _
         "vberror 2", _

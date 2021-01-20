@@ -1,6 +1,7 @@
 #pragma once
 
 using namespace System;
+using namespace System::Numerics;
 using namespace System::Text;
 
 using namespace NetEFI;
@@ -14,21 +15,21 @@ public:
         FunctionInfo^ get()
         { 
             return gcnew FunctionInfo( "cppsum", "a,b", "complex sum of scalars a and b",
-                TComplex::typeid, gcnew array<Type^> {  TComplex::typeid,  TComplex::typeid } );
+                Complex::typeid, gcnew array<Type^> {  Complex::typeid,  Complex::typeid } );
         }
     }
 
-    virtual FunctionInfo^ GetFunctionInfo(String^ lang) { return Info; }
+    virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
 
     virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
     {
-        result = Evaluate( ( TComplex^ ) args[0], ( TComplex^ ) args[1] );
+        result = Evaluate( ( Complex ) args[0], ( Complex ) args[1] );
 
         return true;
     }
 
-    TComplex^ Evaluate( TComplex^ a, TComplex^ b )
+    Complex Evaluate( Complex a, Complex b )
     {
-        return gcnew TComplex( a->Real + b->Real, a->Imaginary + b->Imaginary );
+        return Complex( a.Real + b.Real, a.Imaginary + b.Imaginary );
     }
 };

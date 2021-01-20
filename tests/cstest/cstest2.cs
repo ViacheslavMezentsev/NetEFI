@@ -1,19 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Numerics;
+using System.Collections.Generic;
 
 using NetEFI;
 
 public class cstest2: IFunction
 {
-    public FunctionInfo Info { get; }
-
-    public cstest2()
-    {
-        Info = new FunctionInfo(
-            "cstest2", "separ, v", "return string: v[0] separ v[1] separ ...",
-            typeof( string ),
-            new[] { typeof( string ), typeof( TComplex[,] ) }
-            );
-    }
+    public FunctionInfo Info => new FunctionInfo( "cstest2", "separ, v", "return string: v[0] separ v[1] separ ...",
+            typeof( string ), new[] { typeof( string ), typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
@@ -22,7 +15,7 @@ public class cstest2: IFunction
         try
         {
             var d = ( string ) args[0];
-            var v = ( TComplex[,] ) args[1];
+            var v = ( Complex[,] ) args[1];
 
             var len = v.GetLength( 0 );
 

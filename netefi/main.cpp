@@ -13,12 +13,10 @@
 #include <msclr\marshal_cppstd.h>
 #include "netefi.h"
 #include "mcadincl.h"
-#include "TComplex.h"
 #include "Context.h"
 #include "Manager.h"
 
 using namespace msclr::interop;
-
 using namespace NetEFI;
 
 extern int assemblyId;
@@ -147,37 +145,37 @@ LRESULT UserFunction( PVOID items[] )
         }
 
         // COMPLEXSCALAR
-        else if ( type->Equals( TComplex::typeid ) )
+        else if ( type->Equals( Complex::typeid ) )
         {
             pmcScalar = ( COMPLEXSCALAR * ) items[ n + 1 ];
 
-            args[n] = gcnew TComplex( pmcScalar->real, pmcScalar->imag );
+            args[n] = Complex( pmcScalar->real, pmcScalar->imag );
         }
 
         // COMPLEXARRAY
-        else if ( type->Equals( array<TComplex ^, 2>::typeid ) )
+        else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
             pmcArray = ( COMPLEXARRAY * ) items[ n + 1 ];
 
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
 
-            array<TComplex ^, 2> ^ Matrix = gcnew array<TComplex ^, 2>( rows, cols );
+            array<Complex, 2> ^ Matrix = gcnew array<Complex, 2>( rows, cols );
 
-            TComplex ^ tmp;
+            Complex tmp;
 
             for ( int row = 0; row < rows; row++ )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
                     if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag != NULL ) )
-                        tmp = gcnew TComplex( pmcArray->hReal[ col ][ row ], pmcArray->hImag[ col ][ row ] );
+                        tmp = Complex( pmcArray->hReal[ col ][ row ], pmcArray->hImag[ col ][ row ] );
 
                     if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag == NULL ) )
-                        tmp = gcnew TComplex( pmcArray->hReal[ col ][ row ], 0.0 );
+                        tmp = Complex( pmcArray->hReal[ col ][ row ], 0.0 );
 
                     if ( ( pmcArray->hReal == NULL ) && ( pmcArray->hImag != NULL ) )
-                        tmp = gcnew TComplex( 0.0, pmcArray->hImag[ col ][ row ] );
+                        tmp = Complex( 0.0, pmcArray->hImag[ col ][ row ] );
 
                     Matrix[ row, col ] = tmp;
                 }
@@ -269,20 +267,20 @@ LRESULT UserFunction( PVOID items[] )
     }
 
     // COMPLEXSCALAR
-    else if ( type->Equals( TComplex::typeid ) )
+    else if ( type->Equals( Complex::typeid ) )
     {
         pmcScalar = ( COMPLEXSCALAR * ) items[0];
 
-        TComplex ^ Number = ( TComplex ^ ) result;
+        Complex cmplx = ( Complex ) result;
 
-        pmcScalar->real = Number->Real;
-        pmcScalar->imag = Number->Imaginary;
+        pmcScalar->real = cmplx.Real;
+        pmcScalar->imag = cmplx.Imaginary;
     }
 
     // COMPLEXARRAY
-    else if ( type->Equals( array<TComplex ^, 2>::typeid ) )
+    else if ( type->Equals( array<Complex, 2>::typeid ) )
     {
-        array<TComplex ^, 2> ^ matrix = ( array<TComplex ^, 2> ^ ) result;
+        array<Complex, 2> ^ matrix = ( array<Complex, 2> ^ ) result;
 
         // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
         // ссылка на заполненную структуру COMPLEXARRAY.
@@ -299,7 +297,7 @@ LRESULT UserFunction( PVOID items[] )
         {
             for ( int col = 0; col < cols; col++ )
             {
-                if ( matrix[ row, col ]->Real != 0.0 )
+                if ( matrix[ row, col ].Real != 0.0 )
                 {
                     bReal = true;
                     break;
@@ -314,7 +312,7 @@ LRESULT UserFunction( PVOID items[] )
         {
             for ( int col = 0; col < cols; col++ )
             {
-                if ( matrix[ row, col ]->Imaginary != 0.0 )
+                if ( matrix[ row, col ].Imaginary != 0.0 )
                 {
                     bImag = true;
                     break;
@@ -332,8 +330,8 @@ LRESULT UserFunction( PVOID items[] )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ]->Real;
-                    pmcArray->hImag[ col ][ row ] = matrix[ row, col ]->Imaginary;
+                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
+                    pmcArray->hImag[ col ][ row ] = matrix[ row, col ].Imaginary;
                 }
             }
         }
@@ -346,7 +344,7 @@ LRESULT UserFunction( PVOID items[] )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ]->Real;
+                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
                 }
             }
         }

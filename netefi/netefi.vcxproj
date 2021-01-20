@@ -153,6 +153,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -161,7 +162,6 @@
     <ClInclude Include="mcadincl.h" />
     <ClInclude Include="netefi.h" />
     <ClInclude Include="Stdafx.h" />
-    <ClInclude Include="TComplex.h" />
     <ClInclude Include="test.h" />
   </ItemGroup>
   <ItemGroup>

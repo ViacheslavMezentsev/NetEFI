@@ -37,11 +37,11 @@ Public Class vbtest
 
             result = "empty"
 
-            If cmd.Equals("info") Then
+            If cmd.Equals( "info" ) Then
 
                 result = Assembly.GetExecutingAssembly().ToString()
 
-            ElseIf cmd.Equals("list") Then
+            ElseIf cmd.Equals( "list" ) Then
 
                 Dim list = New List(Of String)()
 
@@ -49,13 +49,12 @@ Public Class vbtest
 
                 For Each type As Type In types
 
-                    If Not type.IsPublic OrElse type.IsAbstract OrElse Not GetType(IFunction).IsAssignableFrom(type) Then
-                        Continue For
-                    End If
+                    If Not type.IsPublic OrElse type.IsAbstract OrElse Not GetType( IFunction ).IsAssignableFrom( type ) Then Continue For
 
-                    Dim f = DirectCast(Activator.CreateInstance(type), IFunction)
+                    Dim f = DirectCast( Activator.CreateInstance( type ), IFunction )
 
-                    list.Add(f.Info.Name)
+                    list.Add( f.Info.Name )
+
                 Next
 
                 result = String.Join(", ", list.ToArray())

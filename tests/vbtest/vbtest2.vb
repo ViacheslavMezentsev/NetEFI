@@ -1,4 +1,5 @@
-﻿Imports NetEFI
+﻿Imports System.Numerics
+Imports NetEFI
 
 Public Class vbtest2
 
@@ -18,7 +19,7 @@ Public Class vbtest2
 
         _info = New FunctionInfo("vbtest2", "separ, v", "return string: v[0] separ v[1] separ ...", _
             GetType(String), _
-            New Type() {GetType(String), GetType(TComplex(,))})
+            New Type() {GetType(String), GetType(Complex(,))})
     End Sub
 
     Public Function GetFunctionInfo(lang As String) As FunctionInfo _
@@ -33,7 +34,7 @@ Public Class vbtest2
         Try
 
             Dim d = CType(args(0), String)
-            Dim v = CType(args(1), TComplex(,))
+            Dim v = CType(args(1), Complex(,))
 
             Dim len As Integer = v.GetLength(0)
 

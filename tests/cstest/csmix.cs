@@ -1,16 +1,10 @@
-﻿using NetEFI;
+﻿using System.Numerics;
+using NetEFI;
 
 public class csmix: IFunction
 {
-
-    public FunctionInfo Info
-    {
-        get
-        {
-            return new FunctionInfo( "csmix", "m, direction", "return mixed array",
-                typeof( TComplex[,] ), new[] { typeof( TComplex[,] ), typeof( TComplex ) } );
-        }
-    }
+    public FunctionInfo Info => new FunctionInfo( "csmix", "m, direction", "return mixed array",
+                typeof( Complex[,] ), new[] { typeof( Complex[,] ), typeof( Complex ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
@@ -30,12 +24,12 @@ public class csmix: IFunction
 
     public bool NumericEvaluation( object[] args, out object result, ref Context context )
     {
-        var N = ( ( TComplex[,] ) args[0] ).GetLength(0);
-        var M = ( ( TComplex[,] ) args[0] ).GetLength(1);
+        var N = ( ( Complex[,] ) args[0] ).GetLength(0);
+        var M = ( ( Complex[,] ) args[0] ).GetLength(1);
 
-        var d = ( byte ) ( ( TComplex ) args[1] ).Real;
+        var d = ( byte ) ( ( Complex ) args[1] ).Real;
 
-        var res = ( TComplex[,] ) args[0];
+        var res = ( Complex[,] ) args[0];
             
         try
         {
@@ -51,7 +45,7 @@ public class csmix: IFunction
             for ( k = 0; k < N * M + 1; k++ ) nums[k] = NextByte();
 
             byte i, j;
-            TComplex tmp;
+            Complex tmp;
 
             if ( d == 0 )
             {

@@ -1,4 +1,5 @@
-﻿Imports NetEFI
+﻿Imports System.Numerics
+Imports NetEFI
 
 
 Public Class vbsum
@@ -8,8 +9,8 @@ Public Class vbsum
 
         Get
             Return New FunctionInfo("vbsum", "a,b", "complex sum of scalars a and b",
-                    GetType(TComplex),
-                    New Type() {GetType(TComplex), GetType(TComplex)})
+                    GetType(Complex),
+                    New Type() {GetType(Complex), GetType(Complex)})
         End Get
     End Property
 
@@ -20,14 +21,14 @@ Public Class vbsum
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
-        result = Evaluate(CType(args(0), TComplex), CType(args(1), TComplex))
+        result = Evaluate( args(0), args(1) )
 
         Return True
     End Function
 
-    Public Function Evaluate(a As TComplex, b As TComplex) As TComplex
+    Public Function Evaluate(a As Complex, b As Complex) As Complex
 
-        Return New TComplex(a.Real + b.Real, a.Imaginary + b.Imaginary)
+        Return New Complex(a.Real + b.Real, a.Imaginary + b.Imaginary)
 
     End Function
 End Class

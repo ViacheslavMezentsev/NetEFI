@@ -1,53 +1,14 @@
-﻿using NetEFI;
+﻿using System.Numerics;
 using System.Collections.Generic;
+using NetEFI;
+
 
 public class cstable: IFunction
 {
-    public FunctionInfo Info
-    {
-        get
-        { 
-            return new FunctionInfo(
-                "cstable", "x", "return table of frequenses n x m",
-                typeof( TComplex[,] ),
-                new[] {typeof( TComplex ) }
-            );
-        }
-    }
+    public FunctionInfo Info => new FunctionInfo( "cstable", "x", "return table of frequenses n x m",
+        typeof( Complex[,] ), new[] { typeof( Complex ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    // Find minimum  Number in the Array 
-    private double Min( double[] value )
-    {
-        var min = value[0];
-
-        for ( var i = 1; i < value.Length; i++ )
-        {
-            if ( value[i] < min )
-            {
-                min = value[i];
-            }
-        }
-
-        return min;
-    }
-
-    // Find maximum  Number in the Array 
-    private double Max( double[] value )
-    {
-        var max = value[0];
-
-        for ( var i = 1; i < value.Length; i++ )
-        {
-            if ( value[i] > max )
-            {
-                max = value[i];
-            }
-        }
-
-        return max;
-    }
 
     uint x = 1, y, z, w;
 
@@ -104,11 +65,11 @@ public class cstable: IFunction
             list[ classid ].Add( k );
         }
 
-        var res = new TComplex[ 256 * 256, 1 ];
+        var res = new Complex[ 256 * 256, 1 ];
 
         for ( k = 0; k < 256 * 256; k++ )
         {
-            res[ k, 0 ] = new TComplex( list[k].Count, 0 );
+            res[ k, 0 ] = new Complex( list[k].Count, 0 );
         }
 
         result = res;

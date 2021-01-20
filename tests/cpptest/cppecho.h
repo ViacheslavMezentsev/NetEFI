@@ -18,7 +18,7 @@ public:
         }
     }
 
-    virtual FunctionInfo^ GetFunctionInfo(String^ lang)
+    virtual FunctionInfo^ GetFunctionInfo( String^ lang )
     { 
         return Info;
     }

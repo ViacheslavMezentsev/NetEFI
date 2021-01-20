@@ -8,44 +8,25 @@ using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
 using namespace System::Collections::Generic;
 
-using namespace std;
 using namespace NetEFI;
-
 
 public ref class cpptest: public IFunction
 {
-private:
-    FunctionInfo ^ info;
-
-protected:
-
-    ~cpptest() {}
-
 public:
 
     virtual property FunctionInfo^ Info
     {
         FunctionInfo^ get()
         { 
-            return info;
+            return gcnew FunctionInfo( "cpptest", "cmd", "return info",
+                String::typeid, gcnew array<Type ^> { String::typeid }
+            );
         }
     }
 
-    !cpptest() {}
-
-    cpptest()
+    virtual FunctionInfo^ GetFunctionInfo( String^ lang )
     {
-		info = gcnew FunctionInfo(
-                
-            "cpptest", "cmd", "return info",            
-            String::typeid,
-            gcnew array<Type^> { String::typeid }
-        );
-    }
-
-    virtual FunctionInfo^ GetFunctionInfo(String^ lang)
-    {
-        return info;
+        return Info;
     }
 
     virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )

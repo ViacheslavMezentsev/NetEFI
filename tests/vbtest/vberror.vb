@@ -1,4 +1,5 @@
-﻿Imports NetEFI
+﻿Imports System.Numerics
+Imports NetEFI
 
 
 Public Class vberror
@@ -8,7 +9,7 @@ Public Class vberror
 
         Get
             Return New FunctionInfo("vberror", "n", "return error string", _
-                    GetType([String]), New Type() {GetType(TComplex)})
+                    GetType(String), New Type() {GetType(Complex)})
         End Get
 
     End Property
@@ -20,7 +21,7 @@ Public Class vberror
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
-        Throw New EFIException(CType(args(0), TComplex).Real, 1)
+        Throw New EFIException(CType(args(0), Complex).Real, 1)
     End Function
 
 End Class

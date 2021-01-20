@@ -1,4 +1,5 @@
-﻿Imports NetEFI
+﻿Imports System.Numerics
+Imports NetEFI
 
 Public Class vbtest1
     Implements IFunction
@@ -16,8 +17,8 @@ Public Class vbtest1
     Public Sub New()
 
         _info = New FunctionInfo("vbtest1", "x", "return complex scalar 2 * x", _
-            GetType(TComplex), _
-            New Type() {GetType(TComplex)})
+            GetType(Complex), _
+            New Type() {GetType(Complex)})
     End Sub
 
     Public Function GetFunctionInfo(lang As String) As FunctionInfo _
@@ -31,9 +32,9 @@ Public Class vbtest1
 
         Try
 
-            Dim arg0 = CType(args(0), TComplex)
+            Dim arg0 = CType(args(0), Complex)
 
-            result = New TComplex(2 * arg0.Real, 2 * arg0.Imaginary)
+            result = New Complex(2 * arg0.Real, 2 * arg0.Imaginary)
 
         Catch ex As Exception
 

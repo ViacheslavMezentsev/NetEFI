@@ -1,11 +1,9 @@
 #include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
-#include "TComplex.h"
 #include "test.h"
 #include "Manager.h"
 
 using namespace msclr::interop;
-
 using namespace NetEFI;
 
 extern LRESULT CallbackFunction( void * out, ... );
@@ -63,13 +61,13 @@ bool Manager::Initialize()
     LogInfo( "netefi, {0}-bit release version {1}, {2:dd-MMM-yyyy HH:mm:ss}", ( is64Bit ? "64" : "32" ), version, bdate );
 #endif
 
-    // Расчёт необходимого размера динамической памяти в зависимости от
-    // максимального числа поддерживаемых функций.
+    // Р Р°СЃС‡С‘С‚ РЅРµРѕР±С…РѕРґРёРјРѕРіРѕ СЂР°Р·РјРµСЂР° РґРёРЅР°РјРёС‡РµСЃРєРѕР№ РїР°РјСЏС‚Рё РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚
+    // РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ С‡РёСЃР»Р° РїРѕРґРґРµСЂР¶РёРІР°РµРјС‹С… С„СѓРЅРєС†РёР№.
     size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;
 
     ::pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
-    // TODO: Обработка кодов ошибок.
+    // TODO: РћР±СЂР°Р±РѕС‚РєР° РєРѕРґРѕРІ РѕС€РёР±РѕРє.
     if ( ::pCode == NULL )
     {
         LogError( "VirtualAllocEx() failed." );
@@ -197,17 +195,17 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
         ::memset( msgItem, 0, s.length() + 1 );
 
-        // Копируем строку из временной области памяти.
+        // РљРѕРїРёСЂСѓРµРј СЃС‚СЂРѕРєСѓ РёР· РІСЂРµРјРµРЅРЅРѕР№ РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё.
         ::memcpy( msgItem, s.c_str(), s.length() );
     }
 
-    // Функция копирует содержимое таблицы во внутреннюю память.
+    // Р¤СѓРЅРєС†РёСЏ РєРѕРїРёСЂСѓРµС‚ СЃРѕРґРµСЂР¶РёРјРѕРµ С‚Р°Р±Р»РёС†С‹ РІРѕ РІРЅСѓС‚СЂРµРЅРЅСЋСЋ РїР°РјСЏС‚СЊ.
     if ( !::CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) )
     {
         LogError( "[CreateUserErrorMessageTable] failed" );
     }
 
-    // Освобождаем выделенную память.
+    // РћСЃРІРѕР±РѕР¶РґР°РµРј РІС‹РґРµР»РµРЅРЅСѓСЋ РїР°РјСЏС‚СЊ.
     for ( int n = 0; n < count; n++ ) ::MathcadFree( ErrorMessageTable[n] );
 
     delete[] ErrorMessageTable;
@@ -241,11 +239,11 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
         {
             fi.returnType = STRING;
         }
-        else if ( type->Equals( TComplex::typeid ) )
+        else if ( type->Equals( Complex::typeid ) )
         {
             fi.returnType = COMPLEX_SCALAR;
         }
-        else if ( type->Equals( array<TComplex ^, 2>::typeid ) )
+        else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
             fi.returnType = COMPLEX_ARRAY;
         }
@@ -280,11 +278,11 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
             {
                 fi.argType[ m ] = STRING;
             }
-            else if ( type->Equals( TComplex::typeid ) )
+            else if ( type->Equals( Complex::typeid ) )
             {
                 fi.argType[ m ] = COMPLEX_SCALAR;
             }
-            else if ( type->Equals( array<TComplex ^, 2>::typeid ) )
+            else if ( type->Equals( array<Complex, 2>::typeid ) )
             {
                 fi.argType[ m ] = COMPLEX_ARRAY;
             }
@@ -310,7 +308,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 // TODO: 64-bit.
 void Manager::InjectCode( PBYTE & p, int k, int n )
 {
-    // Пересылка константы (номера сборки) в глобальную переменную.
+    // РџРµСЂРµСЃС‹Р»РєР° РєРѕРЅСЃС‚Р°РЅС‚С‹ (РЅРѕРјРµСЂР° СЃР±РѕСЂРєРё) РІ РіР»РѕР±Р°Р»СЊРЅСѓСЋ РїРµСЂРµРјРµРЅРЅСѓСЋ.
     *p++ = 0xB8; // mov eax, imm32
     p[0] = k;
     p += sizeof( int );
@@ -319,7 +317,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
     ( int *& ) p[0] = & ::assemblyId;
     p += sizeof( int * );
 
-    // Пересылка константы (номера функции) в глобальную переменную.
+    // РџРµСЂРµСЃС‹Р»РєР° РєРѕРЅСЃС‚Р°РЅС‚С‹ (РЅРѕРјРµСЂР° С„СѓРЅРєС†РёРё) РІ РіР»РѕР±Р°Р»СЊРЅСѓСЋ РїРµСЂРµРјРµРЅРЅСѓСЋ.
     *p++ = 0xB8; // mov eax, imm32
     p[0] = n;
     p += sizeof( int );
@@ -336,12 +334,12 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 }
 
 
-// Загрузка пользовательских библиотек.
+// Р—Р°РіСЂСѓР·РєР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… Р±РёР±Р»РёРѕС‚РµРє.
 bool Manager::LoadAssemblies()
 {
     try
     {
-        // Списки функций и их карточек.
+        // РЎРїРёСЃРєРё С„СѓРЅРєС†РёР№ Рё РёС… РєР°СЂС‚РѕС‡РµРє.
         Manager::Assemblies = gcnew List < AssemblyInfo ^ >();
 
 #ifdef _DEBUG
@@ -362,7 +360,7 @@ bool Manager::LoadAssemblies()
 
             assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
 
-            // Проверяем наличие таблицы с сообщениями об обшибках.
+            // РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ С‚Р°Р±Р»РёС†С‹ СЃ СЃРѕРѕР±С‰РµРЅРёСЏРјРё РѕР± РѕР±С€РёР±РєР°С….
             if ( assemblyInfo->Errors != nullptr ) continue;
 
             FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
@@ -377,10 +375,10 @@ bool Manager::LoadAssemblies()
 
 #else
 
-        // Получаем список всех библиотек в текущей папке.
+        // РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє РІСЃРµС… Р±РёР±Р»РёРѕС‚РµРє РІ С‚РµРєСѓС‰РµР№ РїР°РїРєРµ.
         array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, gcnew String( "*.dll" ) );
 
-        // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
+        // РЎРєР°РЅРёСЂСѓРµРј РєР°Р¶РґС‹Р№ С„Р°Р№Р» РЅР° РЅР°Р»РёС‡РёРµ РєР»Р°СЃСЃРѕРІ, СЂРµР°Р»РёР·СѓСЋС‰РёС… РёРЅС‚РµСЂС„РµР№СЃ IFunction.
         for each ( String ^ path in libs )
         {
             try
@@ -396,7 +394,7 @@ bool Manager::LoadAssemblies()
                 assemblyInfo->Path = path;
                 assemblyInfo->Functions = gcnew List< IFunction ^ >();
 
-                // Assembly и GetType().
+                // Assembly Рё GetType().
                 // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
                 for each ( Type ^ type in assembly->GetTypes() )
@@ -405,7 +403,7 @@ bool Manager::LoadAssemblies()
 
                     assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
 
-                    // Проверяем наличие таблицы с сообщениями об обшибках.
+                    // РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ С‚Р°Р±Р»РёС†С‹ СЃ СЃРѕРѕР±С‰РµРЅРёСЏРјРё РѕР± РѕР±С€РёР±РєР°С….
                     if ( assemblyInfo->Errors != nullptr ) continue;
 
                     FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
@@ -427,7 +425,7 @@ bool Manager::LoadAssemblies()
 
 #endif
 
-        // Теперь регистрируем все функции в Mathcad.        
+        // РўРµРїРµСЂСЊ СЂРµРіРёСЃС‚СЂРёСЂСѓРµРј РІСЃРµ С„СѓРЅРєС†РёРё РІ Mathcad.        
         int totalCount = 0;
         PBYTE p = pCode;
         List<String ^> ^ errorMessageTable = gcnew List<String ^>();
@@ -436,7 +434,7 @@ bool Manager::LoadAssemblies()
         {
             AssemblyInfo ^ assemblyInfo = Assemblies[k];
 
-            // Соединияем все таблицы.
+            // РЎРѕРµРґРёРЅРёСЏРµРј РІСЃРµ С‚Р°Р±Р»РёС†С‹.
             if ( assemblyInfo->Errors != nullptr )
             {
                 errorMessageTable->AddRange( assemblyInfo->Errors );
@@ -470,7 +468,7 @@ bool Manager::LoadAssemblies()
             }
         }
 
-        // Таблица может быть только одна.
+        // РўР°Р±Р»РёС†Р° РјРѕР¶РµС‚ Р±С‹С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРЅР°.
         CreateUserErrorMessageTable( errorMessageTable->ToArray() );
 
     }
