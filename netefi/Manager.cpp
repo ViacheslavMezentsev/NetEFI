@@ -56,8 +56,12 @@ bool Manager::Initialize()
     bdate = bdate->AddSeconds( 2 * version->Revision );
 
     LogInfo( ".Net: {0}", Environment::Version );
-    LogInfo( "{0}-bit", ( is64Bit ? "64" : "32" ) );
-    LogInfo( "netefi, version {0}, {1:dd-MMM-yyyy HH:mm:ss}", version, bdate );
+
+#ifdef _DEBUG
+    LogInfo( "netefi, {0}-bit debug version {1}, {2:dd-MMM-yyyy HH:mm:ss}", ( is64Bit ? "64" : "32" ), version, bdate );
+#else
+    LogInfo( "netefi, {0}-bit release version {1}, {2:dd-MMM-yyyy HH:mm:ss}", ( is64Bit ? "64" : "32" ), version, bdate );
+#endif
 
     // Расчёт необходимого размера динамической памяти в зависимости от
     // максимального числа поддерживаемых функций.
@@ -326,8 +330,9 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 
     // jmp to CallbackFunction. 
     *p++ = 0xE9;
-    ( UINT & ) p[0] = ( PBYTE ) ::CallbackFunction - 4 - p;
-    p += sizeof( PBYTE );
+    ( UINT & ) p[0] = ( PBYTE ) ( ( UINT ) ::CallbackFunction ) - 4 - p;
+    //p += sizeof( PBYTE );
+    p += sizeof( UINT );
 }
 
 
