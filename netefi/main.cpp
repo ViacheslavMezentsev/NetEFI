@@ -8,6 +8,8 @@
 // http://msdn.microsoft.com/en-us/library/xey702bw.aspx
 // Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
 // http://stackoverflow.com/questions/7016663/loading-mixed-mode-c-cli-dll-and-dependencies-dynamically-from-unmanaged-c
+// How to check an object's type in C++/CLI?
+// http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
 
 #include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
@@ -160,28 +162,20 @@ LRESULT UserFunction( PVOID items[] )
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
 
-            array<Complex, 2> ^ Matrix = gcnew array<Complex, 2>( rows, cols );
-
-            Complex tmp;
+            array<Complex, 2> ^ matrix = gcnew array<Complex, 2>( rows, cols );
 
             for ( int row = 0; row < rows; row++ )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag != NULL ) )
-                        tmp = Complex( pmcArray->hReal[ col ][ row ], pmcArray->hImag[ col ][ row ] );
+                    double re = pmcArray->hReal != nullptr ? pmcArray->hReal[ col ][ row ] : 0;
+                    double im = pmcArray->hImag != nullptr ? pmcArray->hImag[ col ][ row ] : 0;
 
-                    if ( ( pmcArray->hReal != NULL ) && ( pmcArray->hImag == NULL ) )
-                        tmp = Complex( pmcArray->hReal[ col ][ row ], 0.0 );
-
-                    if ( ( pmcArray->hReal == NULL ) && ( pmcArray->hImag != NULL ) )
-                        tmp = Complex( 0.0, pmcArray->hImag[ col ][ row ] );
-
-                    Matrix[ row, col ] = tmp;
+                    matrix[ row, col ] = Complex( re, im );
                 }
             }
 
-            args[n] = Matrix;
+            args[n] = matrix;
         }
         else
         {
@@ -231,7 +225,6 @@ LRESULT UserFunction( PVOID items[] )
 
             return E_FAIL;
         }
-
     }
     catch ( System::Exception ^ ex )
     {

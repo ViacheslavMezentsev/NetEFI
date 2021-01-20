@@ -233,8 +233,6 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 
         Type ^ type = info->ReturnType;
 
-        // How to check an object's type in C++/CLI?
-        // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
         if ( type->Equals( String::typeid ) )
         {
             fi.returnType = STRING;
@@ -272,19 +270,19 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 
         for ( unsigned int m = 0; m < fi.nArgs; m++ )
         {
-            type = info->ArgTypes[ m ];
+            type = info->ArgTypes[m];
 
             if ( type->Equals( String::typeid ) )
             {
-                fi.argType[ m ] = STRING;
+                fi.argType[m] = STRING;
             }
             else if ( type->Equals( Complex::typeid ) )
             {
-                fi.argType[ m ] = COMPLEX_SCALAR;
+                fi.argType[m] = COMPLEX_SCALAR;
             }
             else if ( type->Equals( array<Complex, 2>::typeid ) )
             {
-                fi.argType[ m ] = COMPLEX_ARRAY;
+                fi.argType[m] = COMPLEX_ARRAY;
             }
             else
             {
