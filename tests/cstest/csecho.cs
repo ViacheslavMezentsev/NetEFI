@@ -4,7 +4,7 @@ public class csecho: IFunction
 {
     public FunctionInfo Info => new FunctionInfo( "csecho", "s", "return string", typeof( string ), new[] { typeof( string ) } );
 
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
+    public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
     public bool NumericEvaluation( object[] args, out object result, ref Context context )
     {

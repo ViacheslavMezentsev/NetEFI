@@ -188,7 +188,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
         std::string s = marshal_as<std::string>( text );
 
-        char * msgItem = ::MathcadAllocate( s.length() + 1 );
+        char * msgItem = ::MathcadAllocate( ( unsigned ) s.length() + 1 );
 
         ErrorMessageTable[n] = msgItem;
 
@@ -323,11 +323,15 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
     ( int *& ) p[0] = & ::functionId;
     p += sizeof( int * );
 
-    // jmp to CallbackFunction. 
-    *p++ = 0xE9;
-    ( UINT & ) p[0] = ( PBYTE ) ( ( UINT ) ::CallbackFunction ) - 4 - p;
-    //p += sizeof( PBYTE );
-    p += sizeof( UINT );
+    // mov rax, CallbackFunction.
+    *p++ = 0x48;
+    *p++ = 0xB8;
+    ( PBYTE & ) p[0] = ( PBYTE ) ::CallbackFunction;
+    p += sizeof( PBYTE );
+
+    // jmp rax.
+    *p++ = 0xFF;
+    *p++ = 0xE0;
 }
 
 
@@ -391,6 +395,11 @@ bool Manager::LoadAssemblies()
         int totalCount = 0;
         PBYTE p = pCode;
         List<String ^> ^ errorMessageTable = gcnew List<String ^>();
+
+#ifdef _DEBUG
+
+        LogInfo( "p = 0x{0:X16}", ( unsigned long long ) p );
+#endif
 
         for ( int k = 0; k < Assemblies->Count; k++ )
         {

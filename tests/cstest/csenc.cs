@@ -9,8 +9,10 @@ public class csenc: IFunction
 
     public bool NumericEvaluation( object[] args, out object result, ref Context context )
     {
-        var N = ( ( Complex[,] ) args[0] ).GetLength(0);
-        var M = ( ( Complex[,] ) args[0] ).GetLength(1);
+        var matrix = ( Complex[,] ) args[0];
+
+        var N = matrix.GetLength(0);
+        var M = matrix.GetLength(1);
 
         var bytes = new byte[ N * M ];
 
@@ -20,13 +22,13 @@ public class csenc: IFunction
 
             for ( var m = 0; m < M; m++ )
             {
-                bytes[k] = ( byte ) ( ( Complex[,] ) args[0] )[n, m].Real;
+                bytes[k] = ( byte ) matrix[ n, m].Real;
                 k++;
             }
 
         var count = N * M / 8;
 
-        var res = new Complex[count, 1];
+        var res = new Complex[ count, 1 ];
 
         for ( k = 0; k < count; k++ )
         {

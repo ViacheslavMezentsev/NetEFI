@@ -5,7 +5,6 @@ Imports System.Drawing.Imaging
 
 Imports NetEFI
 
-
 Namespace Capture
 
     Public Class capture
@@ -13,21 +12,19 @@ Namespace Capture
 
         Public img As Bitmap = Nothing
 
-        Public ReadOnly Property Info() As FunctionInfo _
-            Implements IFunction.Info
+        Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
 
             Get
                 Return New FunctionInfo( "capture", "n", "take a snapshot from the usb webcam", _
-                    GetType(Complex(,)),
-                    New Type() {GetType(Complex)} )
+                    GetType(Complex(,)), New Type() {GetType(Complex)} )
             End Get
 
         End Property
 
-        Public Function GetFunctionInfo( lang As String ) As FunctionInfo _
-            Implements IFunction.GetFunctionInfo
+        Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
 
             Return Info
+
         End Function
 
         Private Function RGB( matimg As Bitmap ) As Complex(,)
@@ -117,8 +114,6 @@ Namespace Capture
                 If formFormat.ShowDialog() = DialogResult.OK Then
 
                     If Not IsNothing( img ) Then result = RGB( img )
-
-                Else
 
                 End If
 
