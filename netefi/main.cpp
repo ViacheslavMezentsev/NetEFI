@@ -81,11 +81,11 @@ void PrepareManagedCode()
 }
 
 
-bool LoadAssemblies()
+void LoadAssemblies()
 {
     PrepareManagedCode();
 
-    return Manager::Initialize() ? Manager::LoadAssemblies() : false;
+    if ( Manager::Initialize() ) Manager::LoadAssemblies();
 }
 
 
@@ -160,14 +160,17 @@ LRESULT UserFunction( PVOID items[] )
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
 
+            bool bReal = pmcArray->hReal != nullptr;
+            bool bImag = pmcArray->hImag != nullptr;
+
             array<Complex, 2> ^ matrix = gcnew array<Complex, 2>( rows, cols );
 
             for ( int row = 0; row < rows; row++ )
             {
                 for ( int col = 0; col < cols; col++ )
                 {
-                    double re = pmcArray->hReal != nullptr ? pmcArray->hReal[ col ][ row ] : 0;
-                    double im = pmcArray->hImag != nullptr ? pmcArray->hImag[ col ][ row ] : 0;
+                    double re = bReal ? pmcArray->hReal[ col ][ row ] : 0;
+                    double im = bImag ? pmcArray->hImag[ col ][ row ] : 0;
 
                     matrix[ row, col ] = Complex( re, im );
                 }
@@ -177,7 +180,7 @@ LRESULT UserFunction( PVOID items[] )
         }
         else
         {
-            Manager::LogError( "[{0}] Unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() );
+            Manager::LogError( "'{0}' Unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() );
 
             return E_FAIL;
         }
@@ -195,15 +198,13 @@ LRESULT UserFunction( PVOID items[] )
     {
         if ( assemblyInfo->Errors == nullptr )
         {
-            Manager::LogError( "[{0}] {1}", func->Info->Name, "Errors table is empty" );
+            Manager::LogError( "'{0}' {1}", func->Info->Name, "Errors table is empty" );
 
             return E_FAIL;
         }
 
-        if ( ( ex->ErrNum > 0 )
-            && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) )
-            && ( ex->ArgNum > 0 )
-            && ( ex->ArgNum <= func->Info->ArgTypes->GetLength(0) ) )
+        if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) )
+            && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= func->Info->ArgTypes->GetLength(0) ) )
         {
             // Рассчитываем положение таблицы ошибок для текущей сборки
             // в общей зарегистрированной таблице.
@@ -219,14 +220,14 @@ LRESULT UserFunction( PVOID items[] )
         }
         else
         {
-            Manager::LogError( "[{0}] {1}", func->Info->Name, ex->Message );
+            Manager::LogError( "'{0}' {1}", func->Info->Name, ex->Message );
 
             return E_FAIL;
         }
     }
     catch ( System::Exception ^ ex )
     {
-        Manager::LogError( "[{0}] {1}", func->Info->Name, ex->Message );
+        Manager::LogError( "'{0}' {1}", func->Info->Name, ex->Message );
 
         return E_FAIL;
     }
@@ -281,7 +282,7 @@ LRESULT UserFunction( PVOID items[] )
 
         bool bImag = false;
 
-        // Проверка наличия мнимых частей.
+        // Check if imaginary part is empty.
         for ( int row = 0; row < rows; row++ )
         {
             for ( int col = 0; col < cols; col++ )
@@ -293,11 +294,11 @@ LRESULT UserFunction( PVOID items[] )
                 }
             }
 
-            if ( bImag == true ) break;
+            if ( bImag ) break;
         }
 
-        // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
-        // ссылка на заполненную структуру COMPLEXARRAY.
+        // The first parameter for the MathcadArrayAllocate() function
+        // must be pointer to the COMPLEXARRAY structure.
         COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
 
         ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
@@ -317,7 +318,7 @@ LRESULT UserFunction( PVOID items[] )
     }
     else
     {
-        Manager::LogError( "[{0}] Unknown return type: {1}", func->Info->Name, type->ToString() );
+        Manager::LogError( "'{0}' Unknown return type: {1}", func->Info->Name, type->ToString() );
 
         return E_FAIL;
     }

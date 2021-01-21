@@ -23,13 +23,8 @@ public:
 
     virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
     {
-        result = Evaluate( ( Complex ) args[0], ( Complex ) args[1] );
+        result = ( Complex ) args[0] + ( Complex ) args[1];
 
         return true;
-    }
-
-    Complex Evaluate( Complex a, Complex b )
-    {
-        return Complex( a.Real + b.Real, a.Imaginary + b.Imaginary );
     }
 };

@@ -14,7 +14,7 @@ Public Class vbsum
         End Get
     End Property
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
         Return Info
     End Function
 
@@ -26,9 +26,10 @@ Public Class vbsum
         Return True
     End Function
 
-    Public Function Evaluate(a As Complex, b As Complex) As Complex
+    Public Function Evaluate( a As Complex, b As Complex ) As Complex
 
-        Return New Complex(a.Real + b.Real, a.Imaginary + b.Imaginary)
+        Return a + b
 
     End Function
+
 End Class

@@ -10,9 +10,7 @@ public class cstest1: IFunction
 
     public bool NumericEvaluation( object[] args, out object result, ref Context context )
     {
-        var arg0 = ( Complex ) args[0];
-
-        result = new Complex( 2 * arg0.Real, 2 * arg0.Imaginary );
+        result = 2 * ( Complex ) args[0];
 
         return true;
     }

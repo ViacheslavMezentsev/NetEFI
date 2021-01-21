@@ -12,10 +12,10 @@ public:
 
     static array<String^>^ Errors = gcnew array<String^>(4)
     { 
-        gcnew String( "cpperror 1" ),
-        gcnew String( "cpperror 2" ), 
-        gcnew String( "cpperror 3" ),
-        gcnew String( "cpperror 4" )
+        gcnew String( "cpperror: text example 1" ),
+        gcnew String( "cpperror: text example 2" ), 
+        gcnew String( "cpperror: text example 3" ),
+        gcnew String( "cpperror: text example 4" )
     };
 
     virtual property FunctionInfo^ Info

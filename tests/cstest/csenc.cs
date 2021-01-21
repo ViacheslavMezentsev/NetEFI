@@ -3,7 +3,6 @@ using NetEFI;
 
 public class csenc: IFunction
 {
-
     public FunctionInfo Info => new FunctionInfo( "csenc", "m", "encoder", typeof( Complex[,] ), new[] { typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;

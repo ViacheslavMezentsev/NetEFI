@@ -69,7 +69,7 @@ namespace NetEFI
         static void LogError( String ^ text ) { Log( "[ERROR] " + text ); }
         static void LogError( String ^ format, ... array<Object ^> ^ list ) { Log( "[ERROR] " + format, list ); }
 
-        static bool LoadAssemblies();
         static bool Initialize();
+        static bool LoadAssemblies();        
     };
 }

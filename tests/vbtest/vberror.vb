@@ -21,7 +21,8 @@ Public Class vberror
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
-        Throw New EFIException(CType(args(0), Complex).Real, 1)
+        Throw New EFIException( CType( args(0), Complex ).Real, 1 )
+
     End Function
 
 End Class

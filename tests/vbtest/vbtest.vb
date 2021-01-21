@@ -2,30 +2,21 @@
 Imports NetEFI
 
 Public Class vbtest
-
     Implements IFunction
 
-    Private _info As FunctionInfo
-
-    Public ReadOnly Property Info() As FunctionInfo _
-        Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
 
         Get
-            Return _info
+            Return New FunctionInfo("vbtest", "cmd", "return info", _
+                GetType(String), New Type() {GetType(String)})
         End Get
+
     End Property
 
-    Public Sub New()
-
-        _info = New FunctionInfo("vbtest", "cmd", "return info", _
-            GetType(String), _
-            New Type() {GetType(String)})
-    End Sub
-
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo _
-        Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
 
         Return Info
+
     End Function
 
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _

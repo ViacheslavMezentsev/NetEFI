@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using NetEFI;
 
-
 public class cstable: IFunction
 {
     public FunctionInfo Info => new FunctionInfo( "cstable", "x", "return table of frequenses n x m",

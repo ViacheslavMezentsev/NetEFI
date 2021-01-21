@@ -370,7 +370,7 @@ bool Manager::LoadAssemblies()
                     // Проверяем наличие таблицы с сообщениями об обшибках.
                     if ( assemblyInfo->Errors != nullptr ) continue;
 
-                    FieldInfo ^ errorsFieldInfo = type->GetField( "Errors",
+                    FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
                         Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
 
                     if ( errorsFieldInfo == nullptr ) continue;
