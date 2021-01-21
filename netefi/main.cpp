@@ -114,25 +114,23 @@ LRESULT UserFunction( PVOID items[] )
     // Create an array of managed function parameters.
     array < Object ^ > ^ args = gcnew array < Object ^ >( Count );
 
-    MCSTRING * pmcString;
-    COMPLEXSCALAR * pmcScalar;
-    COMPLEXARRAY * pmcArray;
-
-    Type ^ type;
-
     // Convert each parameter to managed type.
     for ( int n = 0; n < Count; n++ )
     {
-        type = func->Info->ArgTypes[n];
+        Type ^ type = func->Info->ArgTypes[n];
+
+        void * item = items[ n + 1 ];
 
         // MCSTRING
+        // It seems that MCSTRING contains only one byte from unicode wchar.
         if ( type->Equals( String::typeid ) )
         {
-            pmcString = ( MCSTRING * ) items[ n + 1 ];
-
-            // It seems that Mathcad EFI supports only 7-bit ASCIIZ strings.
+            MCSTRING * pmcString = ( MCSTRING * ) item;
+            
+            // ANSI char[] to std::string.
             std::string text( pmcString->str );
 
+            // std::string to .net unicode.
             args[n] = marshal_as<String ^>( text );
             
             /*
@@ -149,7 +147,7 @@ LRESULT UserFunction( PVOID items[] )
         // COMPLEXSCALAR
         else if ( type->Equals( Complex::typeid ) )
         {
-            pmcScalar = ( COMPLEXSCALAR * ) items[ n + 1 ];
+            COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) item;
 
             args[n] = Complex( pmcScalar->real, pmcScalar->imag );
         }
@@ -157,7 +155,7 @@ LRESULT UserFunction( PVOID items[] )
         // COMPLEXARRAY
         else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
-            pmcArray = ( COMPLEXARRAY * ) items[ n + 1 ];
+            COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
 
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
@@ -234,17 +232,20 @@ LRESULT UserFunction( PVOID items[] )
     }
 
     // Convert the result.
-    type = result->GetType();
+    Type ^ type = result->GetType();
+    void * item = items[0];
 
     // MCSTRING
     if ( type->Equals( String::typeid ) )
     {
-        pmcString = ( MCSTRING * ) items[0];      
+        MCSTRING * pmcString = ( MCSTRING * ) item;
 
+        // .net unicode to ansi std::string.
         std::string text = marshal_as< std::string >( ( String ^ ) result );
 
         pmcString->str = ( char * ) ::MathcadAllocate( text.size() + 1 );
 
+        // std::string to char[].
         ::memcpy( pmcString->str, text.c_str(), text.size() );
         
         // Null terminate.
@@ -262,7 +263,7 @@ LRESULT UserFunction( PVOID items[] )
     // COMPLEXSCALAR
     else if ( type->Equals( Complex::typeid ) )
     {
-        pmcScalar = ( COMPLEXSCALAR * ) items[0];
+        COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) item;
 
         Complex cmplx = ( Complex ) result;
 
@@ -275,30 +276,10 @@ LRESULT UserFunction( PVOID items[] )
     {
         array<Complex, 2> ^ matrix = ( array<Complex, 2> ^ ) result;
 
-        // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
-        // ссылка на заполненную структуру COMPLEXARRAY.
-        pmcArray = ( COMPLEXARRAY * ) items[0];
-
         int rows = matrix->GetLength(0);
         int cols = matrix->GetLength(1);
 
-        bool bReal = false;
         bool bImag = false;
-
-        // Проверка наличия действительных частей.           
-        for ( int row = 0; row < rows; row++ )
-        {
-            for ( int col = 0; col < cols; col++ )
-            {
-                if ( matrix[ row, col ].Real != 0.0 )
-                {
-                    bReal = true;
-                    break;
-                }
-            }
-            
-            if ( bReal == true ) break;
-        }
 
         // Проверка наличия мнимых частей.
         for ( int row = 0; row < rows; row++ )
@@ -315,29 +296,21 @@ LRESULT UserFunction( PVOID items[] )
             if ( bImag == true ) break;
         }
 
-        if ( ( ( bReal == true ) && ( bImag == true ) ) || ( ( bReal == false ) && ( bImag == true ) ) )
-        {
-            ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, TRUE );
+        // Согласно документации в функцию MathcadArrayAllocate() должна передаваться
+        // ссылка на заполненную структуру COMPLEXARRAY.
+        COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
 
-            for ( int row = 0; row < rows; row++ )
+        ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
+
+        for ( int row = 0; row < rows; row++ )
+        {
+            for ( int col = 0; col < cols; col++ )
             {
-                for ( int col = 0; col < cols; col++ )
+                pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
+
+                if ( bImag )
                 {
-                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
                     pmcArray->hImag[ col ][ row ] = matrix[ row, col ].Imaginary;
-                }
-            }
-        }
-
-        else if ( ( ( bReal == true ) && ( bImag == false ) ) || ( ( bReal == false ) && ( bImag == false ) ) )
-        {
-            ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, FALSE );
-
-            for ( int row = 0; row < rows; row++ )
-            {
-                for ( int col = 0; col < cols; col++ )
-                {
-                    pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
                 }
             }
         }
@@ -363,31 +336,19 @@ LRESULT CallbackFunction( void * out, ... )
 
 BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) 
 {
-    switch ( dwReason )
-    {
-        // DLL проецируется на адресное пространство процесса.
-        case DLL_PROCESS_ATTACH:
-        { 
-            try
-            {
-                LoadAssemblies();
-            }
-            catch (...) {}
-
-            break;
+    if ( dwReason == DLL_PROCESS_ATTACH )
+    { 
+        try
+        {
+            LoadAssemblies();
         }
-
-        // Создаётся поток.
-        case DLL_THREAD_ATTACH: { break; }
-
-        // Поток корректно завершается.
-        case DLL_THREAD_DETACH: { break; }
-
-        // DLL отключается от адресного пространства процесса.
-        case DLL_PROCESS_DETACH: { break; }
+        catch (...) {}
     }
 
-    // Используется только для DLL_PROCESS_ATTACH.
+    else if ( dwReason == DLL_PROCESS_DETACH )
+    {
+    }
+
     return TRUE;
 }
 

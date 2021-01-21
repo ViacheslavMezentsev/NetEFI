@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include <msclr\marshal_cppstd.h>
-#include "test.h"
 #include "Manager.h"
 
 using namespace msclr::interop;
@@ -332,7 +331,7 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 }
 
 
-// Загрузка пользовательских библиотек.
+// Load and register user libraries.
 bool Manager::LoadAssemblies()
 {
     try
@@ -340,41 +339,8 @@ bool Manager::LoadAssemblies()
         // Списки функций и их карточек.
         Manager::Assemblies = gcnew List < AssemblyInfo ^ >();
 
-#ifdef _DEBUG
-
-        LogInfo( "[netefi] Debug mode" );
-
-        AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
-        assemblyInfo->Path = AssemblyDirectory;
-        assemblyInfo->Functions = gcnew List< IFunction ^ >();
-
-        array<Type ^> ^ types = Assembly::GetExecutingAssembly()->GetTypes();
-
-        for each ( Type ^ type in types )
-        {
-            if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
-
-            IFunction ^ f = ( IFunction ^ ) Activator::CreateInstance( type );
-
-            assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
-
-            // Проверяем наличие таблицы с сообщениями об обшибках.
-            if ( assemblyInfo->Errors != nullptr ) continue;
-
-            FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
-                Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
-
-            if ( errorsFieldInfo == nullptr ) continue;
-
-            assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
-        }
-
-        if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
-
-#else
-
         // Получаем список всех библиотек в текущей папке.
-        array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, gcnew String( "*.dll" ) );
+        array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
 
         // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
         for each ( String ^ path in libs )
@@ -404,7 +370,7 @@ bool Manager::LoadAssemblies()
                     // Проверяем наличие таблицы с сообщениями об обшибках.
                     if ( assemblyInfo->Errors != nullptr ) continue;
 
-                    FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
+                    FieldInfo ^ errorsFieldInfo = type->GetField( "Errors",
                         Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
 
                     if ( errorsFieldInfo == nullptr ) continue;
@@ -421,8 +387,6 @@ bool Manager::LoadAssemblies()
             }
         }
 
-#endif
-
         // Теперь регистрируем все функции в Mathcad.        
         int totalCount = 0;
         PBYTE p = pCode;
@@ -438,6 +402,8 @@ bool Manager::LoadAssemblies()
                 errorMessageTable->AddRange( assemblyInfo->Errors );
             }
 
+            int count = 0;
+
             for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
             {
                 if ( totalCount >= MAX_FUNCTIONS_COUNT ) break;
@@ -446,7 +412,7 @@ bool Manager::LoadAssemblies()
 
                 FunctionInfo ^ info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
 
-                if ( CreateUserFunction( info, p ) == NULL ) continue;
+                if ( CreateUserFunction( info, p ) == nullptr ) continue;
 
                 InjectCode( p, k, n );
 
@@ -460,10 +426,13 @@ bool Manager::LoadAssemblies()
                     ? String::Format( "[ {0} ] {1}", info->Parameters, info->Description )
                     : String::Format( "[ {0} ] {1}", args, info->Description );
 
-                LogInfo( "[{0}] [{1}] {2} - {3}", totalCount, Path::GetFileName( assemblyInfo->Path ), info->Name, text );
+                LogInfo( "{0} - {1}", info->Name, text );
 
+                count++;
                 totalCount++;
             }
+
+            LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
         }
 
         // Таблица может быть только одна.
