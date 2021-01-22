@@ -17,11 +17,13 @@ public class cstest: IFunction
         {
             var cmd = ( string ) args[0];
 
-            result = "empty";
+            result = "help: info, list";
 
             if ( cmd.Equals( "info" ) )
             {
-                result = Assembly.GetExecutingAssembly().ToString();
+                var name = Assembly.GetExecutingAssembly().GetName();
+
+                result = $"{name.Name} {name.Version}";
             }
             else if ( cmd.Equals( "list" ) )
             {

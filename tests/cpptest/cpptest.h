@@ -35,11 +35,13 @@ public:
         {
             String^ cmd = ( String^ ) args[0];
 
-            result = gcnew String( "empty" );
+            result = gcnew String( "help: info, list" );
 
             if ( cmd->Equals( gcnew String("info") ) )
             {
-                result = Assembly::GetExecutingAssembly()->ToString();
+                auto name = Assembly::GetExecutingAssembly()->GetName();
+
+                result = String::Format( "{0} {1}", name->Name, name->Version );
             }
             else if ( cmd->Equals( gcnew String("list") ) )
             {

@@ -7,8 +7,8 @@ using namespace NetEFI;
 
 extern LRESULT CallbackFunction( void * out, ... );
 
-#define MAX_FUNCTIONS_COUNT 10000UL
-#define DYNAMIC_BLOCK_SIZE 25
+#define MAX_FUNCTIONS_COUNT     10000UL
+#define DYNAMIC_BLOCK_SIZE      40U
 
 int assemblyId = -1;
 int functionId = -1;
@@ -67,7 +67,7 @@ bool Manager::Initialize()
     ::pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
     // TODO: Обработка кодов ошибок.
-    if ( ::pCode == NULL )
+    if ( ::pCode == nullptr )
     {
         LogError( "VirtualAllocEx() failed." );
 
@@ -302,24 +302,25 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 }
 
 
-// TODO: 64-bit.
 void Manager::InjectCode( PBYTE & p, int k, int n )
 {
-    // Пересылка константы (номера сборки) в глобальную переменную.
-    *p++ = 0xB8; // mov eax, imm32
+    // mov eax, imm32
+    *p++ = 0xB8; 
     p[0] = k;
     p += sizeof( int );
 
-    *p++ = 0xA3; // mov [assemblyId], eax
+    // mov [assemblyId], eax
+    *p++ = 0xA3; 
     ( int *& ) p[0] = & ::assemblyId;
     p += sizeof( int * );
 
-    // Пересылка константы (номера функции) в глобальную переменную.
-    *p++ = 0xB8; // mov eax, imm32
+    // mov eax, imm32
+    *p++ = 0xB8; 
     p[0] = n;
     p += sizeof( int );
 
-    *p++ = 0xA3; // mov [functionId], eax
+    // mov [functionId], eax
+    *p++ = 0xA3; 
     ( int *& ) p[0] = & ::functionId;
     p += sizeof( int * );
 
@@ -340,10 +341,9 @@ bool Manager::LoadAssemblies()
 {
     try
     {
-        // Списки функций и их карточек.
         Manager::Assemblies = gcnew List < AssemblyInfo ^ >();
 
-        // Получаем список всех библиотек в текущей папке.
+        // Get all assemblies.
         array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
 
         // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
@@ -351,7 +351,7 @@ bool Manager::LoadAssemblies()
         {
             try
             {
-                if ( !IsManagedAssembly( path ) || path->Equals( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath ) ) continue;
+                if ( !IsManagedAssembly( path ) /*|| path->Equals( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath ) */ ) continue;
 
                 AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
 

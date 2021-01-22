@@ -26,11 +26,13 @@ Public Class vbtest
 
             Dim cmd = CType(args(0), String)
 
-            result = "empty"
+            result = "help: info, list"
 
             If cmd.Equals( "info" ) Then
 
-                result = Assembly.GetExecutingAssembly().ToString()
+                Dim name = Assembly.GetExecutingAssembly().GetName()
+
+                result = $"{name.Name} {name.Version}"
 
             ElseIf cmd.Equals( "list" ) Then
 
