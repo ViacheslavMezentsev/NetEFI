@@ -4,9 +4,9 @@ using System.Reflection;
 
 using NetEFI;
 
-public class cstest: IFunction
+public class cstools: IFunction
 {
-    public FunctionInfo Info => new FunctionInfo( "cstest", "cmd", "return info",
+    public FunctionInfo Info => new FunctionInfo( "cstools", "cmd", "return info",
         typeof( string ), new[] { typeof( string ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
@@ -40,7 +40,7 @@ public class cstest: IFunction
                     list.Add( f.Info.Name );
                 }
 
-                result = string.Join( ", ", list.ToArray() );
+                result = string.Join(", ", list.ToArray());
             }
         }
         catch

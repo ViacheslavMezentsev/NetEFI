@@ -346,12 +346,12 @@ bool Manager::LoadAssemblies()
         // Get all assemblies.
         array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
 
-        // Сканируем каждый файл на наличие классов, реализующих интерфейс IFunction.
+        // Find all types with IFunction interface.
         for each ( String ^ path in libs )
         {
             try
             {
-                if ( !IsManagedAssembly( path ) /*|| path->Equals( ( gcnew System::Uri( ExecAssembly->CodeBase ) )->LocalPath ) */ ) continue;
+                if ( !IsManagedAssembly( path ) ) continue;
 
                 AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
 
@@ -371,7 +371,7 @@ bool Manager::LoadAssemblies()
 
                     assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
 
-                    // Проверяем наличие таблицы с сообщениями об обшибках.
+                    // Check if error table exists.
                     if ( assemblyInfo->Errors != nullptr ) continue;
 
                     FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
@@ -391,21 +391,16 @@ bool Manager::LoadAssemblies()
             }
         }
 
-        // Теперь регистрируем все функции в Mathcad.        
+        // Register all functions in Mathcad.        
         int totalCount = 0;
         PBYTE p = pCode;
         List<String ^> ^ errorMessageTable = gcnew List<String ^>();
-
-#ifdef _DEBUG
-
-        LogInfo( "p = 0x{0:X16}", ( unsigned long long ) p );
-#endif
 
         for ( int k = 0; k < Assemblies->Count; k++ )
         {
             AssemblyInfo ^ assemblyInfo = Assemblies[k];
 
-            // Соединияем все таблицы.
+            // Add error table.
             if ( assemblyInfo->Errors != nullptr )
             {
                 errorMessageTable->AddRange( assemblyInfo->Errors );
@@ -444,7 +439,7 @@ bool Manager::LoadAssemblies()
             LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
         }
 
-        // Таблица может быть только одна.
+        // The only one error table supported.
         CreateUserErrorMessageTable( errorMessageTable->ToArray() );
 
     }

@@ -32,7 +32,7 @@ Public Class vbtest
 
                 Dim name = Assembly.GetExecutingAssembly().GetName()
 
-                result = $"{name.Name} {name.Version}"
+                result = $"{name.Name}: {name.Version}"
 
             ElseIf cmd.Equals( "list" ) Then
 

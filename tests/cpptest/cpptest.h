@@ -41,7 +41,7 @@ public:
             {
                 auto name = Assembly::GetExecutingAssembly()->GetName();
 
-                result = String::Format( "{0} {1}", name->Name, name->Version );
+                result = String::Format( "{0}: {1}", name->Name, name->Version );
             }
             else if ( cmd->Equals( gcnew String("list") ) )
             {
