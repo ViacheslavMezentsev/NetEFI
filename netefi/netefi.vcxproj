@@ -75,26 +75,26 @@
     <OutDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</OutDir>
     <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
     <IntDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)32</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)32</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(PlatformTarget)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
