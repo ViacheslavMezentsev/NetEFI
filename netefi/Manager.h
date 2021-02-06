@@ -18,7 +18,7 @@ namespace NetEFI
 
         ~Manager() {}
 
-        static List < AssemblyInfo ^ > ^ Assemblies;
+        static List < AssemblyInfo ^ > ^ Assemblies = LoadAssemblies();
 
         static property Assembly ^ ExecAssembly
         {
@@ -70,7 +70,8 @@ namespace NetEFI
         static void LogError( String ^ format, ... array<Object ^> ^ list ) { Log( "[ERROR] " + format, list ); }
 
         static bool Initialize();
-        static bool LoadAssemblies();        
+        static bool RegisterFunctions();
+        static List < AssemblyInfo ^ > ^ LoadAssemblies();
     };
 
     public ref class netefi : public IFunction
@@ -81,7 +82,7 @@ namespace NetEFI
         {
             FunctionInfo ^ get()
             {
-                return gcnew FunctionInfo( "netefi", "cmd", "return string",
+                return gcnew FunctionInfo( Manager::ExecAssembly->GetName()->Name, "cmd", "return string",
                     String::typeid, gcnew array<Type ^> { String::typeid } );
             }
         }
@@ -95,7 +96,7 @@ namespace NetEFI
         {
             String ^ cmd = ( String ^ ) args[0];
 
-            result = gcnew String( "help: info, author, email, list" );
+            result = gcnew String( "help: info, os, net, author, email, list" );
 
             if ( cmd->Equals( gcnew String( "info" ) ) )
             {
@@ -110,6 +111,16 @@ namespace NetEFI
                 bdate = bdate->AddSeconds( 2 * version->Revision );
 
                 result = String::Format( "{0}: {1}-bit, {2}, {3:dd-MMM-yyyy HH:mm:ss}", name->Name, ( is64Bit ? "64" : "32" ), version, bdate );
+            }
+
+            else if ( cmd->Equals( gcnew String( "os" ) ) )
+            {
+                result = Environment::OSVersion->ToString();
+            }
+
+            else if ( cmd->Equals( gcnew String( "net" ) ) )
+            {
+                result = Environment::Version->ToString();
             }
 
             else if ( cmd->Equals( gcnew String( "author" ) ) )

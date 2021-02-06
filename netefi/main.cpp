@@ -85,7 +85,7 @@ void LoadAssemblies()
 {
     PrepareManagedCode();
 
-    if ( Manager::Initialize() ) Manager::LoadAssemblies();
+    Manager::RegisterFunctions();
 }
 
 

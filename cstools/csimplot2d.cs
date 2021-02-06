@@ -122,6 +122,8 @@ public class csimplot2d : IFunction
 
     private PointD VertexInterp( double level, PointD p1, PointD p2, double v1, double v2 )
     {
+        if ( v2 == v1 ) return p1;
+
         var s = ( level - v1 ) / ( v2 - v1 );
 
         return new PointD( p1.X + s * ( p2.X - p1.X ), p1.Y + s * ( p2.Y - p1.Y ) );
@@ -149,34 +151,31 @@ public class csimplot2d : IFunction
         for ( var n = 0; n < nx; n++ )
         {
             for ( var m = 0; m < ny; m++ )
-            {
-                try
-                {
-                    // Значение z в вершинах квадрата.
-                    var vals = GetValues( n, m, zvalues );
+            {                
+                // Значение z в вершинах квадрата.
+                var vals = GetValues( n, m, zvalues );
 
-                    if ( vals.Any( z => double.IsNaN(z) ) ) continue;
+                if ( vals.Any( z => double.IsNaN( z ) ) ) continue;                
+                
+                // Get the type of intersection.
+                var indx = GetIndex( vals, isolevel );
 
-                    // Классифицируем тип пересечения.
-                    var indx = GetIndex( vals, isolevel );
+                // Пропускаем, если нет пересечения.
+                if ( _edgeTable[ indx ] == 0 ) continue;
 
-                    // Пропускаем, если нет пересечения.
-                    if ( _edgeTable[ indx ] == 0 ) continue;
+                // Current square.
+                var xy = GetPoints( dx, dy, xmin, ymin, n, m );
 
-                    // Текущий квадрат.
-                    var xy = GetPoints( dx, dy, xmin, ymin, n, m );
+                // Point list for the current square.
+                var vlist = GetVertList( isolevel, xy, vals );
 
-                    // Получаем список точек для найденного квадрата.
-                    var vlist = GetVertList( isolevel, xy, vals );
-
-                    // Заполняем список точек кривой отрезками на основе 
-                    // найденной конфигурации пересечения.
-                    pairs.AddRange( _table[ indx ].Select( p => new[] { vlist[ p[0] ], vlist[ p[1] ] } ) );
-                }
-                catch { continue; }
+                // Заполняем список точек кривой отрезками на основе 
+                // найденной конфигурации пересечения.
+                pairs.AddRange( _table[ indx ].Select( p => new[] { vlist[ p[0] ], vlist[ p[1] ] } ) );
             }
         }
 
+        // TODO: Change to more stable method.
         var curves = new List<List<PointD>>();
 
         while ( pairs.Any() )

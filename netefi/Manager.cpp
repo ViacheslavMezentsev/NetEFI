@@ -55,9 +55,9 @@ bool Manager::Initialize()
     LogInfo( ".Net: {0}", Environment::Version );
 
 #ifdef _DEBUG
-    LogInfo( "netefi, {0}-bit debug version {1}, {2:dd-MMM-yyyy HH:mm:ss}", ( is64Bit ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit debug version {2}, {3:dd-MMM-yyyy HH:mm:ss}", ExecAssembly->GetName()->Name, ( is64Bit ? "64" : "32" ), version, bdate );
 #else
-    LogInfo( "netefi, {0}-bit release version {1}, {2:dd-MMM-yyyy HH:mm:ss}", ( is64Bit ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit release version {2}, {3:dd-MMM-yyyy HH:mm:ss}", ExecAssembly->GetName()->Name, ( is64Bit ? "64" : "32" ), version, bdate );
 #endif
 
     // Расчёт необходимого размера динамической памяти в зависимости от
@@ -176,11 +176,9 @@ bool Manager::IsManagedAssembly( String ^ fileName )
 
 void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 {
-    char ** ErrorMessageTable;
-
     int count = errors->GetLength(0);
 
-    ErrorMessageTable = new char * [ count ];
+    char ** ErrorMessageTable = new char * [ count ];
 
     for ( int n = 0; n < count; n++ )
     {
@@ -336,60 +334,12 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 }
 
 
-// Load and register user libraries.
-bool Manager::LoadAssemblies()
+// Register user functions.
+bool Manager::RegisterFunctions()
 {
     try
     {
-        Manager::Assemblies = gcnew List < AssemblyInfo ^ >();
-
-        // Get all assemblies.
-        array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
-
-        // Find all types with IFunction interface.
-        for each ( String ^ path in libs )
-        {
-            try
-            {
-                if ( !IsManagedAssembly( path ) ) continue;
-
-                AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
-
-                // LoadFile vs. LoadFrom
-                // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
-                Assembly ^ assembly = Assembly::LoadFile( path );
-
-                assemblyInfo->Path = path;
-                assemblyInfo->Functions = gcnew List< IFunction ^ >();
-
-                // Assembly и GetType().
-                // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
-                // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
-                for each ( Type ^ type in assembly->GetTypes() )
-                {
-                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
-
-                    assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
-
-                    // Check if error table exists.
-                    if ( assemblyInfo->Errors != nullptr ) continue;
-
-                    FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
-                        Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
-
-                    if ( errorsFieldInfo == nullptr ) continue;
-
-                    assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
-                }
-
-                if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
-            }
-            catch ( Exception ^ ex )
-            {
-                LogError( ex->Message );
-                continue;
-            }
-        }
+        if ( Assemblies == nullptr ) return false;
 
         // Register all functions in Mathcad.        
         int totalCount = 0;
@@ -440,8 +390,7 @@ bool Manager::LoadAssemblies()
         }
 
         // The only one error table supported.
-        CreateUserErrorMessageTable( errorMessageTable->ToArray() );
-
+        CreateUserErrorMessageTable( errorMessageTable->ToArray() );        
     }
     catch ( System::Exception ^ ex )
     {
@@ -451,4 +400,69 @@ bool Manager::LoadAssemblies()
     }
 
     return true;
+}
+
+// Load user libraries.
+List < AssemblyInfo ^ > ^ Manager::LoadAssemblies()
+{
+    Assemblies = gcnew List < AssemblyInfo ^ >();
+
+    if ( !Initialize() ) return Assemblies;
+
+    try
+    {
+        // Get all assemblies.
+        array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
+
+        // Find all types with IFunction interface.
+        for each ( String ^ path in libs )
+        {
+            try
+            {
+                if ( !IsManagedAssembly( path ) ) continue;
+
+                AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
+
+                // LoadFile vs. LoadFrom
+                // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
+                Assembly ^ assembly = Assembly::LoadFile( path );
+
+                assemblyInfo->Path = path;
+                assemblyInfo->Functions = gcnew List< IFunction ^ >();
+
+                // Assembly и GetType().
+                // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
+                // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
+                for each ( Type ^ type in assembly->GetTypes() )
+                {
+                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+
+                    assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
+
+                    // Check if error table exists.
+                    if ( assemblyInfo->Errors != nullptr ) continue;
+
+                    FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
+                        Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
+
+                    if ( errorsFieldInfo == nullptr ) continue;
+
+                    assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
+                }
+
+                if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
+            }
+            catch ( Exception ^ ex )
+            {
+                LogError( ex->Message );
+                continue;
+            }
+        }
+    }
+    catch ( System::Exception ^ ex )
+    {
+        LogError( ex->Message );
+    }
+
+    return Assemblies;
 }
