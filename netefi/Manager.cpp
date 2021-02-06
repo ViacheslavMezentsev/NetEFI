@@ -12,7 +12,7 @@ extern LRESULT CallbackFunction( void * out, ... );
 
 int assemblyId = -1;
 int functionId = -1;
-PBYTE pCode = NULL;
+PBYTE pCode = nullptr;
 CMathcadEfi MathcadEfi;
 
 CMathcadEfi::CMathcadEfi()
@@ -112,50 +112,6 @@ bool Manager::Initialize()
         return false;
     }
 
-    /*
-    String ^ path = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
-
-    if ( !File::Exists( path ) )
-    {
-        LogError( "File not found: {0}", path );
-
-        return false;
-    }
-
-    marshal_context context;
-
-    HMODULE hLib = ::LoadLibraryW( context.marshal_as<LPCWSTR>( path ) );
-
-    if ( hLib == NULL )
-    {
-        LogError( "[LoadLibrary] returns NULL." );
-
-        return false;
-    }
-
-    ::CreateUserFunction = ( PCREATE_USER_FUNCTION ) ::GetProcAddress( hLib, "CreateUserFunction" );
-    ::CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE ) ::GetProcAddress( hLib, "CreateUserErrorMessageTable" );
-    ::MathcadAllocate = ( PMATHCAD_ALLOCATE ) ::GetProcAddress( hLib, "MathcadAllocate" );
-    ::MathcadFree = ( PMATHCAD_FREE ) ::GetProcAddress( hLib, "MathcadFree" );
-    ::MathcadArrayAllocate = ( PMATHCAD_ARRAY_ALLOCATE ) ::GetProcAddress( hLib, "MathcadArrayAllocate" );
-    ::MathcadArrayFree = ( PMATHCAD_ARRAY_FREE ) ::GetProcAddress( hLib, "MathcadArrayFree" );
-    ::isUserInterrupted = ( PIS_USER_INTERRUPTED ) ::GetProcAddress( hLib, "isUserInterrupted" );
-
-    if ( ::CreateUserFunction == NULL
-        || ::CreateUserErrorMessageTable == NULL
-        || ::MathcadAllocate == NULL
-        || ::MathcadFree == NULL
-        || ::MathcadArrayAllocate == NULL
-        || ::MathcadArrayFree == NULL
-        || ::isUserInterrupted == NULL )
-    {
-        LogError( "[GetProcAddress] returns NULL." );
-
-        return false;
-    }
-
-    */
-
     return MathcadEfi.Attached;
 }
 
@@ -219,7 +175,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 {
     int count = errors->GetLength(0);
 
-    char ** ErrorMessageTable = new char * [ count ];
+    char ** errorMessages = new char * [ count ];
 
     for ( int n = 0; n < count; n++ )
     {
@@ -229,24 +185,24 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
         char * msgItem = MathcadEfi.MathcadAllocate( ( unsigned ) s.length() + 1 );
 
-        ErrorMessageTable[n] = msgItem;
+        errorMessages[n] = msgItem;
 
         ::memset( msgItem, 0, s.length() + 1 );
 
-        // Копируем строку из временной области памяти.
+        // Copy string from the temporery buffer.
         ::memcpy( msgItem, s.c_str(), s.length() );
     }
 
-    // Функция копирует содержимое таблицы во внутреннюю память.
-    if ( !MathcadEfi.CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) )
+    // Copy table content to the inner memory.
+    if ( !MathcadEfi.CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, errorMessages ) )
     {
         LogError( "[CreateUserErrorMessageTable] failed" );
     }
 
-    // Освобождаем выделенную память.
-    for ( int n = 0; n < count; n++ ) MathcadEfi.MathcadFree( ErrorMessageTable[n] );
+    // Free allocated memory.
+    for ( int n = 0; n < count; n++ ) MathcadEfi.MathcadFree( errorMessages[n] );
 
-    delete[] ErrorMessageTable;
+    delete[] errorMessages;
 }
 
 
@@ -385,7 +341,7 @@ bool Manager::RegisterFunctions()
         // Register all functions in Mathcad.        
         int totalCount = 0;
         PBYTE p = pCode;
-        List<String ^> ^ errorMessageTable = gcnew List<String ^>();
+        auto errorMessages = gcnew List<String ^>();
 
         for ( int k = 0; k < Assemblies->Count; k++ )
         {
@@ -394,7 +350,7 @@ bool Manager::RegisterFunctions()
             // Add error table.
             if ( assemblyInfo->Errors != nullptr )
             {
-                errorMessageTable->AddRange( assemblyInfo->Errors );
+                errorMessages->AddRange( assemblyInfo->Errors );
             }
 
             int count = 0;
@@ -431,7 +387,7 @@ bool Manager::RegisterFunctions()
         }
 
         // The only one error table supported.
-        CreateUserErrorMessageTable( errorMessageTable->ToArray() );        
+        CreateUserErrorMessageTable( errorMessages->ToArray() );
     }
     catch ( System::Exception ^ ex )
     {
@@ -444,16 +400,16 @@ bool Manager::RegisterFunctions()
 }
 
 // Load user libraries.
-List < AssemblyInfo ^ > ^ Manager::LoadAssemblies()
+bool Manager::LoadAssemblies()
 {
     Assemblies = gcnew List < AssemblyInfo ^ >();
 
-    if ( !Initialize() ) return Assemblies;
+    if ( !Initialize() ) return false;
 
     try
     {
         // Get all assemblies.
-        array< String ^ > ^ libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
+        auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
 
         // Find all types with IFunction interface.
         for each ( String ^ path in libs )
@@ -503,7 +459,9 @@ List < AssemblyInfo ^ > ^ Manager::LoadAssemblies()
     catch ( System::Exception ^ ex )
     {
         LogError( ex->Message );
+
+        return false;
     }
 
-    return Assemblies;
+    return true;
 }

@@ -36,7 +36,7 @@ namespace NetEFI
 
         ~Manager() {}
 
-        static List < AssemblyInfo ^ > ^ Assemblies = LoadAssemblies();
+        static List < AssemblyInfo ^ > ^ Assemblies;
 
         static property Assembly ^ ExecAssembly
         {
@@ -88,8 +88,8 @@ namespace NetEFI
         static void LogError( String ^ format, ... array<Object ^> ^ list ) { Log( "[ERROR] " + format, list ); }
 
         static bool Initialize();
-        static bool RegisterFunctions();
-        static List < AssemblyInfo ^ > ^ LoadAssemblies();
+        static bool LoadAssemblies();
+        static bool RegisterFunctions();        
     };
 
     public ref class netefi : public IFunction

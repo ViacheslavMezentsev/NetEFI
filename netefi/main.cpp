@@ -84,7 +84,7 @@ void RegisterFunctions()
 
     currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
 
-    Manager::RegisterFunctions();
+    if ( Manager::LoadAssemblies() ) Manager::RegisterFunctions();
 }
 
 
@@ -209,16 +209,17 @@ LRESULT UserFunction( PVOID items[] )
         if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) )
             && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= count ) )
         {
-            // Рассчитываем положение таблицы ошибок для текущей сборки
-            // в общей зарегистрированной таблице.
+            // Calculate the error table location.
             int offset = 0;
 
             for ( int n = 0; n < assemblyId; n++ )
-            {
-                offset += assemblyInfo->Errors->GetLength(0);
+            {                
+                auto assembly = Manager::Assemblies[n];
+
+                offset += assembly->Errors == nullptr ? 0 : assembly->Errors->GetLength(0);
             }
 
-            // См. Руководство разработчика библиотек пользователя.
+            // See Mathcad Developer Reference for the details.
             return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
         }
         else
