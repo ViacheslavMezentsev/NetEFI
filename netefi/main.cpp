@@ -23,14 +23,7 @@ using namespace NetEFI;
 
 extern int assemblyId;
 extern int functionId;
-
-PCREATE_USER_FUNCTION CreateUserFunction;
-PCREATE_USER_ERROR_MESSAGE_TABLE CreateUserErrorMessageTable;
-PMATHCAD_ALLOCATE MathcadAllocate;
-PMATHCAD_FREE MathcadFree;
-PMATHCAD_ARRAY_ALLOCATE MathcadArrayAllocate;
-PMATHCAD_ARRAY_FREE MathcadArrayFree;
-PIS_USER_INTERRUPTED isUserInterrupted;
+extern CMathcadEfi MathcadEfi;
 
 /// <summary>
 /// This handler is called only when the CLR tries to bind to the assembly and fails
@@ -40,17 +33,29 @@ PIS_USER_INTERRUPTED isUserInterrupted;
 /// <returns>The loaded assembly</returns>
 Assembly ^ OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args )
 {
-    Manager::LogInfo( "[OnAssemblyResolve] {0}", args->Name );
-
     Assembly ^ retval = nullptr;
-    String ^ path = nullptr;
 
     // Load the assembly from the specified path.
     try
     {
-        path = args->Name->Substring( 0, args->Name->IndexOf( "," ) ) + ".dll";
+        auto fields = args->Name->Split( ',' );
 
-        path = Path::Combine( Manager::AssemblyDirectory, path );
+        auto name = fields[0];
+
+        if ( name->EndsWith( ".resources" ) && fields->Length > 2 )
+        {
+            auto culture = fields[2];
+
+            if ( !culture->EndsWith( "neutral" ) ) return retval;
+        }
+
+        if ( name->Equals( Manager::ExecAssembly->GetName()->Name ) ) return Manager::ExecAssembly;
+
+        name = name + ".dll";
+
+        Manager::LogInfo( "[OnAssemblyResolve] {0}", name );             
+
+        String ^ path = Path::Combine( Manager::AssemblyDirectory, name );
 
         if ( File::Exists( path ) )
         {
@@ -72,18 +77,12 @@ Assembly ^ OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args )
 }
 
 
-void PrepareManagedCode()
+void RegisterFunctions()
 {
-    // Set up our resolver for assembly loading.
+    // Prepare managed code. Set up our resolver for assembly loading.
     AppDomain ^ currentDomain = AppDomain::CurrentDomain;
 
     currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
-}
-
-
-void LoadAssemblies()
-{
-    PrepareManagedCode();
 
     Manager::RegisterFunctions();
 }
@@ -99,7 +98,11 @@ LRESULT UserFunction( PVOID items[] )
     {
         assemblyInfo = Manager::Assemblies[ assemblyId ];
 
+        if ( assemblyInfo == nullptr ) throw gcnew Exception();
+
         func = assemblyInfo->Functions[ functionId ];
+
+        if ( func == nullptr ) throw gcnew Exception();
     }
     catch ( ... )
     {
@@ -109,13 +112,13 @@ LRESULT UserFunction( PVOID items[] )
     }
 
     // Get the count of parameters.
-    int Count = func->Info->ArgTypes->GetLength(0);
+    int count = func->Info->ArgTypes->GetLength(0);
 
     // Create an array of managed function parameters.
-    array < Object ^ > ^ args = gcnew array < Object ^ >( Count );
+    array < Object ^ > ^ args = gcnew array < Object ^ >( count );
 
     // Convert each parameter to managed type.
-    for ( int n = 0; n < Count; n++ )
+    for ( int n = 0; n < count; n++ )
     {
         Type ^ type = func->Info->ArgTypes[n];
 
@@ -204,7 +207,7 @@ LRESULT UserFunction( PVOID items[] )
         }
 
         if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) )
-            && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= func->Info->ArgTypes->GetLength(0) ) )
+            && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= count ) )
         {
             // Рассчитываем положение таблицы ошибок для текущей сборки
             // в общей зарегистрированной таблице.
@@ -244,7 +247,7 @@ LRESULT UserFunction( PVOID items[] )
         // .net unicode to ansi std::string.
         std::string text = marshal_as< std::string >( ( String ^ ) result );
 
-        pmcString->str = ( char * ) ::MathcadAllocate( text.size() + 1 );
+        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( text.size() + 1 );
 
         // std::string to char[].
         ::memcpy( pmcString->str, text.c_str(), text.size() );
@@ -301,7 +304,7 @@ LRESULT UserFunction( PVOID items[] )
         // must be pointer to the COMPLEXARRAY structure.
         COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
 
-        ::MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
+        MathcadEfi.MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
 
         for ( int row = 0; row < rows; row++ )
         {
@@ -341,7 +344,7 @@ BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved
     { 
         try
         {
-            LoadAssemblies();
+            RegisterFunctions();
         }
         catch (...) {}
     }

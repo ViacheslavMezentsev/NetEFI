@@ -13,6 +13,44 @@ extern LRESULT CallbackFunction( void * out, ... );
 int assemblyId = -1;
 int functionId = -1;
 PBYTE pCode = NULL;
+CMathcadEfi MathcadEfi;
+
+CMathcadEfi::CMathcadEfi()
+{
+    String ^ path = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
+
+    if ( File::Exists( path ) )
+    {        
+        marshal_context context;
+
+        HMODULE hLib = ::LoadLibraryW( context.marshal_as<LPCWSTR>( path ) );
+
+        if ( hLib != NULL )
+        {            
+            CreateUserFunction = ( PCREATE_USER_FUNCTION ) ::GetProcAddress( hLib, "CreateUserFunction" );
+            CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE ) ::GetProcAddress( hLib, "CreateUserErrorMessageTable" );
+            MathcadAllocate = ( PMATHCAD_ALLOCATE ) ::GetProcAddress( hLib, "MathcadAllocate" );
+            MathcadFree = ( PMATHCAD_FREE ) ::GetProcAddress( hLib, "MathcadFree" );
+            MathcadArrayAllocate = ( PMATHCAD_ARRAY_ALLOCATE ) ::GetProcAddress( hLib, "MathcadArrayAllocate" );
+            MathcadArrayFree = ( PMATHCAD_ARRAY_FREE ) ::GetProcAddress( hLib, "MathcadArrayFree" );
+            isUserInterrupted = ( PIS_USER_INTERRUPTED ) ::GetProcAddress( hLib, "isUserInterrupted" );
+        }
+        else
+        {
+            Manager::LogError( "[LoadLibrary] returns NULL." );
+        }
+    }
+    else
+    {
+        Manager::LogError( "File not found: {0}", path );
+    }
+
+    Attached = ( CreateUserFunction != nullptr && CreateUserErrorMessageTable != nullptr
+        && MathcadAllocate != nullptr && MathcadFree != nullptr
+        && MathcadArrayAllocate != nullptr && MathcadArrayFree != nullptr
+        && isUserInterrupted != nullptr );
+}
+
 
 void Manager::Log( String ^ text )
 {
@@ -74,6 +112,7 @@ bool Manager::Initialize()
         return false;
     }
 
+    /*
     String ^ path = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
 
     if ( !File::Exists( path ) )
@@ -115,7 +154,9 @@ bool Manager::Initialize()
         return false;
     }
 
-    return true;
+    */
+
+    return MathcadEfi.Attached;
 }
 
 // How to determine whether a DLL is a managed assembly or native (prevent loading a native dll)?
@@ -186,7 +227,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
         std::string s = marshal_as<std::string>( text );
 
-        char * msgItem = ::MathcadAllocate( ( unsigned ) s.length() + 1 );
+        char * msgItem = MathcadEfi.MathcadAllocate( ( unsigned ) s.length() + 1 );
 
         ErrorMessageTable[n] = msgItem;
 
@@ -197,13 +238,13 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
     }
 
     // Функция копирует содержимое таблицы во внутреннюю память.
-    if ( !::CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) )
+    if ( !MathcadEfi.CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, ErrorMessageTable ) )
     {
         LogError( "[CreateUserErrorMessageTable] failed" );
     }
 
     // Освобождаем выделенную память.
-    for ( int n = 0; n < count; n++ ) ::MathcadFree( ErrorMessageTable[n] );
+    for ( int n = 0; n < count; n++ ) MathcadEfi.MathcadFree( ErrorMessageTable[n] );
 
     delete[] ErrorMessageTable;
 }
@@ -289,7 +330,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
             }
         }
 
-        return ::CreateUserFunction( ::GetModuleHandle( NULL ), & fi );
+        return MathcadEfi.CreateUserFunction( ::GetModuleHandle( NULL ), & fi );
     }
     catch ( System::Exception ^ ex )
     {
@@ -337,10 +378,10 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 // Register user functions.
 bool Manager::RegisterFunctions()
 {
+    if ( Assemblies == nullptr ) return false;
+
     try
     {
-        if ( Assemblies == nullptr ) return false;
-
         // Register all functions in Mathcad.        
         int totalCount = 0;
         PBYTE p = pCode;

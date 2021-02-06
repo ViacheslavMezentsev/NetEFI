@@ -4,9 +4,11 @@
 
 using namespace NetEFI;
 
+extern CMathcadEfi MathcadEfi;
+
 bool Context::IsUserInterrupted::get()
 {
-    return ::isUserInterrupted == NULL ? false : ::isUserInterrupted();
+    return ( MathcadEfi.isUserInterrupted != nullptr ) && MathcadEfi.isUserInterrupted();
 }
 
 

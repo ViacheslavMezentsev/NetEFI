@@ -2,6 +2,24 @@
 
 #include "netefi.h"
 
+class CMathcadEfi
+{
+public:
+    bool Attached;
+
+    PCREATE_USER_FUNCTION CreateUserFunction;
+    PCREATE_USER_ERROR_MESSAGE_TABLE CreateUserErrorMessageTable;
+    PMATHCAD_ALLOCATE MathcadAllocate;
+    PMATHCAD_FREE MathcadFree;
+    PMATHCAD_ARRAY_ALLOCATE MathcadArrayAllocate;
+    PMATHCAD_ARRAY_FREE MathcadArrayFree;
+    PIS_USER_INTERRUPTED isUserInterrupted;
+
+public:
+    ~CMathcadEfi() {}
+    CMathcadEfi();
+};
+
 namespace NetEFI
 {
     public ref class Manager
