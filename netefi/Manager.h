@@ -16,7 +16,7 @@ public:
     PIS_USER_INTERRUPTED isUserInterrupted;
 
 public:
-    ~CMathcadEfi() {}
+    ~CMathcadEfi();
     CMathcadEfi();
 };
 
@@ -80,6 +80,7 @@ namespace NetEFI
 
 
     public:
+        static Assembly ^ OnAssemblyResolve( Object ^, ResolveEventArgs ^ );
 
         static void LogInfo( String ^ text ) { Log( "[INFO ] " + text ); }
         static void LogInfo( String ^ format, ... array<Object ^> ^ list ) { Log( "[INFO ] " + format, list ); }

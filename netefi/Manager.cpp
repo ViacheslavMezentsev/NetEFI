@@ -10,9 +10,9 @@ extern LRESULT CallbackFunction( void * out, ... );
 #define MAX_FUNCTIONS_COUNT     10000UL
 #define DYNAMIC_BLOCK_SIZE      40U
 
-int assemblyId = -1;
-int functionId = -1;
-PBYTE pCode = nullptr;
+int AssemblyId = -1;
+int FunctionId = -1;
+PBYTE DynamicCode = nullptr;
 CMathcadEfi MathcadEfi;
 
 CMathcadEfi::CMathcadEfi()
@@ -52,6 +52,18 @@ CMathcadEfi::CMathcadEfi()
 }
 
 
+CMathcadEfi::~CMathcadEfi()
+{
+    try
+    {
+        ::VirtualFreeEx( ::GetCurrentProcess(), DynamicCode, 0, MEM_RELEASE );
+
+        if ( File::Exists( Manager::LogFile ) ) File::Delete( Manager::LogFile );
+    }
+    catch ( ... ) {}
+}
+
+
 void Manager::Log( String ^ text )
 {
     text = String::Format( "{0:dd.MM.yyyy HH:mm:ss} {1}{2}", DateTime::Now, text, Environment::NewLine );
@@ -72,15 +84,60 @@ void Manager::Log( String ^ format, ... array<Object ^> ^ list )
 }
 
 
-// TODO: VirtualFreeEx (?)
+/// <summary>
+/// This handler is called only when the CLR tries to bind to the assembly and fails
+/// </summary>
+/// <param name="sender">Event originator</param>
+/// <param name="args">Event data</param>
+/// <returns>The loaded assembly</returns>
+Assembly ^ Manager::OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args )
+{
+    Assembly ^ retval = nullptr;
+
+    // Load the assembly from the specified path.
+    try
+    {
+        auto fields = args->Name->Split( ',' );
+
+        auto name = fields[0];
+
+        if ( name->EndsWith( ".resources" ) && fields->Length > 2 )
+        {
+            auto culture = fields[2];
+
+            if ( !culture->EndsWith( "neutral" ) ) return retval;
+        }
+
+        if ( name->Equals( Manager::ExecAssembly->GetName()->Name ) ) return Manager::ExecAssembly;
+
+        name = name + ".dll";
+
+        Manager::LogInfo( "[OnAssemblyResolve] {0}", name );             
+
+        String ^ path = Path::Combine( Manager::AssemblyDirectory, name );
+
+        if ( File::Exists( path ) )
+        {
+            retval = Assembly::LoadFile( path );
+
+            Manager::LogInfo( "Assembly loaded: {0}", path );
+        }
+        else
+        {
+            Manager::LogInfo( "Assembly not found: {0}", path );
+        }
+    }
+    catch ( System::Exception ^ ex )
+    {
+        Manager::LogError( "Assembly not loaded: {0}", ex->Message );
+    }
+
+    return retval;
+}
+
+
 bool Manager::Initialize()
 {
-    try
-    { 
-        if ( File::Exists( LogFile ) ) File::Delete( LogFile );
-    }
-    catch ( ... ) {}
-
     bool is64Bit = Marshal::SizeOf( IntPtr::typeid ) == 8;
 
     auto name = ExecAssembly->GetName();
@@ -98,22 +155,9 @@ bool Manager::Initialize()
     LogInfo( "{0}: {1}-bit release version {2}, {3:dd-MMM-yyyy HH:mm:ss}", ExecAssembly->GetName()->Name, ( is64Bit ? "64" : "32" ), version, bdate );
 #endif
 
-    // Расчёт необходимого размера динамической памяти в зависимости от
-    // максимального числа поддерживаемых функций.
-    size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;
-
-    ::pCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
-
-    // TODO: Обработка кодов ошибок.
-    if ( ::pCode == nullptr )
-    {
-        LogError( "VirtualAllocEx() failed." );
-
-        return false;
-    }
-
     return MathcadEfi.Attached;
 }
+
 
 // How to determine whether a DLL is a managed assembly or native (prevent loading a native dll)?
 // http://stackoverflow.com/questions/367761/how-to-determine-whether-a-dll-is-a-managed-assembly-or-native-prevent-loading
@@ -125,7 +169,7 @@ bool Manager::IsManagedAssembly( String ^ fileName )
 
     if ( fileStream->Length < 64 ) return false;
 
-    //PE Header starts @ 0x3C (60). Its a 4 byte header.
+    // PE Header starts @ 0x3C (60). Its a 4 byte header.
     fileStream->Position = 0x3C;
 
     UINT peHeaderPointer = binaryReader->ReadUInt32();
@@ -165,9 +209,7 @@ bool Manager::IsManagedAssembly( String ^ fileName )
 
     UINT cliHeaderRva = binaryReader->ReadUInt32();
 
-    if ( cliHeaderRva == 0 ) return false;
-
-    return true;
+    return ( cliHeaderRva != 0 );
 }
 
 
@@ -208,12 +250,12 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
 PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 {
+    FUNCTIONINFO fi;
+
+    marshal_context context;
+
     try
     {
-        FUNCTIONINFO fi;
-
-        marshal_context context;
-
         String ^ s = info->Name;
         fi.lpstrName = ( char * ) context.marshal_as<const char *>(s);
 
@@ -243,7 +285,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
         {
             LogError( "[{0}] Unknown return type: {1}", info->Name, type->ToString() );
 
-            return NULL;
+            return nullptr;
         }
 
         fi.nArgs = info->ArgTypes->GetLength(0);
@@ -252,7 +294,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
         {
             LogInfo( "[{0}] No arguments (must be between 1 and {1}).", info->Name, MAX_ARGS );
 
-            return NULL;
+            return nullptr;
         }
 
         if ( fi.nArgs > MAX_ARGS )
@@ -282,7 +324,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
             {
                 LogError( "[{0}] Unknown argument type {1}: {2}", info->Name, m, type->ToString() );
 
-                return NULL;
+                return nullptr;
             }
         }
 
@@ -292,7 +334,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
     {
         LogError( "[{0}] {1}", info->Name, ex->Message );
 
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -304,9 +346,9 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
     p[0] = k;
     p += sizeof( int );
 
-    // mov [assemblyId], eax
+    // mov [AssemblyId], eax
     *p++ = 0xA3; 
-    ( int *& ) p[0] = & ::assemblyId;
+    ( int *& ) p[0] = & ::AssemblyId;
     p += sizeof( int * );
 
     // mov eax, imm32
@@ -314,9 +356,9 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
     p[0] = n;
     p += sizeof( int );
 
-    // mov [functionId], eax
+    // mov [FunctionId], eax
     *p++ = 0xA3; 
-    ( int *& ) p[0] = & ::functionId;
+    ( int *& ) p[0] = & ::FunctionId;
     p += sizeof( int * );
 
     // mov rax, CallbackFunction.
@@ -340,7 +382,7 @@ bool Manager::RegisterFunctions()
     {
         // Register all functions in Mathcad.        
         int totalCount = 0;
-        PBYTE p = pCode;
+        PBYTE pCode = DynamicCode;
         auto errorMessages = gcnew List<String ^>();
 
         for ( int k = 0; k < Assemblies->Count; k++ )
@@ -363,9 +405,9 @@ bool Manager::RegisterFunctions()
 
                 FunctionInfo ^ info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
 
-                if ( CreateUserFunction( info, p ) == nullptr ) continue;
+                if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
-                InjectCode( p, k, n );
+                InjectCode( pCode, k, n );
 
                 List< String ^ > ^ params = gcnew List< String ^ >();
 
@@ -386,7 +428,7 @@ bool Manager::RegisterFunctions()
             LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
         }
 
-        // The only one error table supported.
+        // Note. The only one error table supported.
         CreateUserErrorMessageTable( errorMessages->ToArray() );
     }
     catch ( System::Exception ^ ex )
@@ -398,6 +440,7 @@ bool Manager::RegisterFunctions()
 
     return true;
 }
+
 
 // Load user libraries.
 bool Manager::LoadAssemblies()
@@ -454,6 +497,20 @@ bool Manager::LoadAssemblies()
                 LogError( ex->Message );
                 continue;
             }
+        }
+
+        // Расчёт необходимого размера динамической памяти в зависимости от
+        // максимального числа поддерживаемых функций.
+        size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;
+
+        ::DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
+
+        // TODO: Handle errors.
+        if ( ::DynamicCode == nullptr )
+        {
+            LogError( "Dynamic memory allocate failed." );
+
+            return false;
         }
     }
     catch ( System::Exception ^ ex )

@@ -21,68 +21,15 @@
 using namespace msclr::interop;
 using namespace NetEFI;
 
-extern int assemblyId;
-extern int functionId;
+extern int AssemblyId;
+extern int FunctionId;
 extern CMathcadEfi MathcadEfi;
-
-/// <summary>
-/// This handler is called only when the CLR tries to bind to the assembly and fails
-/// </summary>
-/// <param name="sender">Event originator</param>
-/// <param name="args">Event data</param>
-/// <returns>The loaded assembly</returns>
-Assembly ^ OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args )
-{
-    Assembly ^ retval = nullptr;
-
-    // Load the assembly from the specified path.
-    try
-    {
-        auto fields = args->Name->Split( ',' );
-
-        auto name = fields[0];
-
-        if ( name->EndsWith( ".resources" ) && fields->Length > 2 )
-        {
-            auto culture = fields[2];
-
-            if ( !culture->EndsWith( "neutral" ) ) return retval;
-        }
-
-        if ( name->Equals( Manager::ExecAssembly->GetName()->Name ) ) return Manager::ExecAssembly;
-
-        name = name + ".dll";
-
-        Manager::LogInfo( "[OnAssemblyResolve] {0}", name );             
-
-        String ^ path = Path::Combine( Manager::AssemblyDirectory, name );
-
-        if ( File::Exists( path ) )
-        {
-            retval = Assembly::LoadFile( path );
-
-            Manager::LogInfo( "Assembly loaded: {0}", path );
-        }
-        else
-        {
-            Manager::LogInfo( "Assembly not found: {0}", path );
-        }
-    }
-    catch ( System::Exception ^ ex )
-    {
-        Manager::LogError( "Assembly not loaded: {0}", ex->Message );
-    }
-
-    return retval;
-}
 
 
 void RegisterFunctions()
 {
-    // Prepare managed code. Set up our resolver for assembly loading.
-    AppDomain ^ currentDomain = AppDomain::CurrentDomain;
-
-    currentDomain->AssemblyResolve += gcnew ResolveEventHandler( OnAssemblyResolve );
+    // Prepare managed code. Setup our resolver for assembly loading.
+    AppDomain::CurrentDomain->AssemblyResolve += gcnew ResolveEventHandler( Manager::OnAssemblyResolve );
 
     if ( Manager::LoadAssemblies() ) Manager::RegisterFunctions();
 }
@@ -96,17 +43,17 @@ LRESULT UserFunction( PVOID items[] )
 
     try
     {
-        assemblyInfo = Manager::Assemblies[ assemblyId ];
+        assemblyInfo = Manager::Assemblies[ AssemblyId ];
 
         if ( assemblyInfo == nullptr ) throw gcnew Exception();
 
-        func = assemblyInfo->Functions[ functionId ];
+        func = assemblyInfo->Functions[ FunctionId ];
 
         if ( func == nullptr ) throw gcnew Exception();
     }
     catch ( ... )
     {
-        Manager::LogError( "assemblyId: {0}, functionId: {1}", assemblyId, functionId );
+        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", AssemblyId, FunctionId );
 
         return E_FAIL;
     }
@@ -189,12 +136,13 @@ LRESULT UserFunction( PVOID items[] )
         }
     }
     
-    Object ^ result;
-    Context ^ context = gcnew Context();
+    Object ^ result;    
 
     // Call the user function.
     try
     {
+        auto context = gcnew Context();
+
         if ( !func->NumericEvaluation( args, result, context ) ) return E_FAIL;
     }
     catch ( EFIException ^ ex )
@@ -212,7 +160,7 @@ LRESULT UserFunction( PVOID items[] )
             // Calculate the error table location.
             int offset = 0;
 
-            for ( int n = 0; n < assemblyId; n++ )
+            for ( int n = 0; n < AssemblyId; n++ )
             {                
                 auto assembly = Manager::Assemblies[n];
 
@@ -329,7 +277,6 @@ LRESULT UserFunction( PVOID items[] )
 
     return S_OK;
 }
-
 
 #pragma unmanaged
 
