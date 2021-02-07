@@ -1,9 +1,11 @@
-﻿// Основы миграции C++/CLI.
+﻿// .NET programming with C++ / CLI
+// https://docs.microsoft.com/ru-ru/cpp/dotnet/dotnet-programming-with-cpp-cli-visual-cpp
+// C++/CLI Migration Primer.
 // http://msdn.microsoft.com/ru-ru/library/ms235289.aspx
 // C++/CLI Tasks.
 // http://msdn.microsoft.com/ru-ru/library/hh875047.aspx
 // Common Language Runtime Loader and DllMain
-// http://msdn.microsoft.com/en-us/library/aa290048(v=vs.71).aspx
+// http://msdn.microsoft.com/en-us/library/aa290048.aspx
 // Component Extensions for Runtime Platforms
 // http://msdn.microsoft.com/en-us/library/xey702bw.aspx
 // Loading Mixed-Mode C++/CLI .dll (and dependencies) dynamically from unmanaged c++
@@ -287,14 +289,14 @@ LRESULT CallbackFunction( void * out, ... )
 
 
 BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) 
-{
+{   
     if ( dwReason == DLL_PROCESS_ATTACH )
     { 
         try
         {
             RegisterFunctions();
         }
-        catch (...) {}
+        catch ( ... ) {}
     }
 
     else if ( dwReason == DLL_PROCESS_DETACH )

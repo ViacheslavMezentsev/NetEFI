@@ -56,7 +56,7 @@ CMathcadEfi::~CMathcadEfi()
 {
     try
     {
-        ::VirtualFreeEx( ::GetCurrentProcess(), DynamicCode, 0, MEM_RELEASE );
+        if ( ::DynamicCode != nullptr ) ::VirtualFreeEx( ::GetCurrentProcess(), ::DynamicCode, 0, MEM_RELEASE );
 
         if ( File::Exists( Manager::LogFile ) ) File::Delete( Manager::LogFile );
     }
@@ -138,21 +138,18 @@ Assembly ^ Manager::OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args 
 
 bool Manager::Initialize()
 {
-    bool is64Bit = Marshal::SizeOf( IntPtr::typeid ) == 8;
+    auto aname = ExecAssembly->GetName();
 
-    auto name = ExecAssembly->GetName();
-    auto version = name->Version;
+    auto version = aname->Version;
 
-    DateTime ^ bdate = ( gcnew DateTime( 2000, 1, 1 ) )->AddDays( version->Build );
-
-    bdate = bdate->AddSeconds( 2 * version->Revision );
+    auto bdate = ( gcnew DateTime( 2000, 1, 1 ) )->AddDays( version->Build ).AddSeconds( 2 * version->Revision );
 
     LogInfo( ".Net: {0}", Environment::Version );
 
 #ifdef _DEBUG
-    LogInfo( "{0}: {1}-bit debug version {2}, {3:dd-MMM-yyyy HH:mm:ss}", ExecAssembly->GetName()->Name, ( is64Bit ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit debug version {2}, {3:dd-MMM-yyyy HH:mm:ss}", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
 #else
-    LogInfo( "{0}: {1}-bit release version {2}, {3:dd-MMM-yyyy HH:mm:ss}", ExecAssembly->GetName()->Name, ( is64Bit ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit release version {2}, {3:dd-MMM-yyyy HH:mm:ss}", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
 #endif
 
     return MathcadEfi.Attached;
@@ -339,6 +336,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 }
 
 
+// The magic part is here.
 void Manager::InjectCode( PBYTE & p, int k, int n )
 {
     // mov eax, imm32
@@ -409,15 +407,13 @@ bool Manager::RegisterFunctions()
 
                 InjectCode( pCode, k, n );
 
-                List< String ^ > ^ params = gcnew List< String ^ >();
+                auto params = gcnew List< String ^ >();
 
-                for each ( Type ^ type in info->ArgTypes ) params->Add( type->ToString() );
+                for each ( auto type in info->ArgTypes ) params->Add( type->ToString() );
 
-                String ^ args = String::Join( gcnew String( "," ), params->ToArray() );
+                String ^ text = ( info->Parameters->Length > 0 ) ? info->Parameters : String::Join( ",", params->ToArray() );
 
-                String ^ text = ( info->Parameters->Length > 0 )
-                    ? String::Format( "[ {0} ] {1}", info->Parameters, info->Description )
-                    : String::Format( "[ {0} ] {1}", args, info->Description );
+                text = String::Format( "[ {0} ] {1}", text, info->Description );
 
                 LogInfo( "{0} - {1}", info->Name, text );
 
@@ -499,6 +495,7 @@ bool Manager::LoadAssemblies()
             }
         }
 
+        // TODO: Use calculated number of functions instead of MAX_FUNCTIONS_COUNT.
         // Расчёт необходимого размера динамической памяти в зависимости от
         // максимального числа поддерживаемых функций.
         size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;

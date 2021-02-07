@@ -34,8 +34,6 @@ namespace NetEFI
 
     public:
 
-        ~Manager() {}
-
         static List < AssemblyInfo ^ > ^ Assemblies;
 
         static property Assembly ^ ExecAssembly
@@ -113,48 +111,32 @@ namespace NetEFI
 
         virtual bool NumericEvaluation( array< Object ^ > ^ args, [ Out ] Object ^% result, Context ^% context )
         {
-            String ^ cmd = ( String ^ ) args[0];
+            result = "help: info, os, net, author, email, list";
 
-            result = gcnew String( "help: info, os, net, author, email, list" );
+            auto cmd = ( String ^ ) args[0];
 
-            if ( cmd->Equals( gcnew String( "info" ) ) )
+            if ( cmd == "info" )
             {
-                bool is64Bit = Marshal::SizeOf( IntPtr::typeid ) == 8;
+                auto aname = Assembly::GetExecutingAssembly()->GetName();
 
-                auto name = Assembly::GetExecutingAssembly()->GetName();
+                auto version = aname->Version;
 
-                auto version = name->Version;
+                auto bdate = ( gcnew DateTime( 2000, 1, 1 ) )->AddDays( version->Build ).AddSeconds( 2 * version->Revision );
 
-                DateTime ^ bdate = ( gcnew DateTime( 2000, 1, 1 ) )->AddDays( version->Build );
-
-                bdate = bdate->AddSeconds( 2 * version->Revision );
-
-                result = String::Format( "{0}: {1}-bit, {2}, {3:dd-MMM-yyyy HH:mm:ss}", name->Name, ( is64Bit ? "64" : "32" ), version, bdate );
+                result = String::Format( "{0}: {1}-bit, {2}, {3:dd-MMM-yyyy HH:mm:ss}", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
             }
 
-            else if ( cmd->Equals( gcnew String( "os" ) ) )
-            {
-                result = Environment::OSVersion->ToString();
-            }
+            else if ( cmd == "os" ) result = Environment::OSVersion->ToString();
 
-            else if ( cmd->Equals( gcnew String( "net" ) ) )
-            {
-                result = Environment::Version->ToString();
-            }
+            else if ( cmd == "net" ) result = Environment::Version->ToString();
 
-            else if ( cmd->Equals( gcnew String( "author" ) ) )
-            {
-                result = gcnew String( "Viacheslav N. Mezentsev" );
-            }
+            else if ( cmd == "author" ) result = "Viacheslav N. Mezentsev";
 
-            else if ( cmd->Equals( gcnew String( "email" ) ) )
-            {
-                result = gcnew String( "viacheslavmezentsev@ya.ru" );
-            }
+            else if ( cmd == "email" ) result = "viacheslavmezentsev@ya.ru";
 
-            else if ( cmd->Equals( gcnew String( "list" ) ) )
+            else if ( cmd == "list" )
             {
-                List<String^>^ list = gcnew List<String ^>();
+                auto list = gcnew List<String ^>();
 
                 for each ( auto info in Manager::Assemblies )
                 {
