@@ -108,28 +108,28 @@ Assembly ^ Manager::OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args 
             if ( !culture->EndsWith( "neutral" ) ) return retval;
         }
 
-        if ( name->Equals( Manager::ExecAssembly->GetName()->Name ) ) return Manager::ExecAssembly;
+        if ( name->Equals( ExecAssembly->GetName()->Name ) ) return ExecAssembly;
 
         name = name + ".dll";
 
-        Manager::LogInfo( "[OnAssemblyResolve] {0}", name );             
+        LogInfo( "[OnAssemblyResolve] {0}", name );             
 
-        String ^ path = Path::Combine( Manager::AssemblyDirectory, name );
+        String ^ path = Path::Combine( AssemblyDirectory, name );
 
         if ( File::Exists( path ) )
         {
             retval = Assembly::LoadFile( path );
 
-            Manager::LogInfo( "Assembly loaded: {0}", path );
+            LogInfo( "Assembly loaded: {0}", path );
         }
         else
         {
-            Manager::LogInfo( "Assembly not found: {0}", path );
+            LogInfo( "Assembly not found: {0}", path );
         }
     }
     catch ( System::Exception ^ ex )
     {
-        Manager::LogError( "Assembly not loaded: {0}", ex->Message );
+        LogError( "Assembly not loaded: {0}", ex->Message );
     }
 
     return retval;
@@ -138,6 +138,12 @@ Assembly ^ Manager::OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args 
 
 bool Manager::Initialize()
 {
+    auto process = Process::GetCurrentProcess();
+
+    auto fileInfo = FileVersionInfo::GetVersionInfo( process->MainModule->FileName );
+
+    LogInfo( "{0} version {1}, {2}", fileInfo->ProductName, fileInfo->ProductVersion, fileInfo->LegalCopyright );
+
     auto aname = ExecAssembly->GetName();
 
     auto version = aname->Version;
@@ -147,9 +153,9 @@ bool Manager::Initialize()
     LogInfo( ".Net: {0}", Environment::Version );
 
 #ifdef _DEBUG
-    LogInfo( "{0}: {1}-bit debug version {2}, {3:dd-MMM-yyyy HH:mm:ss}", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit debug version {2} ({3:dd-MMM-yyyy HH:mm:ss})", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
 #else
-    LogInfo( "{0}: {1}-bit release version {2}, {3:dd-MMM-yyyy HH:mm:ss}", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
+    LogInfo( "{0}: {1}-bit release version {2} ({3:dd-MMM-yyyy HH:mm:ss})", aname->Name, ( Environment::Is64BitProcess ? "64" : "32" ), version, bdate );
 #endif
 
     return MathcadEfi.Attached;

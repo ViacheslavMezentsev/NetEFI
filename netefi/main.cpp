@@ -28,15 +28,6 @@ extern int FunctionId;
 extern CMathcadEfi MathcadEfi;
 
 
-void RegisterFunctions()
-{
-    // Prepare managed code. Setup our resolver for assembly loading.
-    AppDomain::CurrentDomain->AssemblyResolve += gcnew ResolveEventHandler( Manager::OnAssemblyResolve );
-
-    if ( Manager::LoadAssemblies() ) Manager::RegisterFunctions();
-}
-
-
 LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % args )
 {
     int count = func->Info->ArgTypes->GetLength(0);
@@ -51,11 +42,9 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
         // MCSTRING to String.
         // It seems that MCSTRING contains only one byte from unicode wchar.
         if ( type->Equals( String::typeid ) )
-        {
-            MCSTRING * pmcString = ( MCSTRING * ) item;
-            
+        {           
             // ANSI char[] to std::string.
-            std::string text( pmcString->str );
+            std::string text( ( ( LPMCSTRING ) item )->str );
 
             // std::string to .net unicode.
             args[n] = marshal_as<String ^>( text );
@@ -63,7 +52,7 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
             /*
             size_t len = strlen( pmcString->str );
 
-            array<Byte> ^ bytes = gcnew array<Byte>( len );
+            auto bytes = gcnew array<Byte>( len );
 
             Marshal::Copy( IntPtr( pmcString->str ), bytes, 0, bytes->Length );
 
@@ -74,7 +63,7 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
         // COMPLEXSCALAR to Complex;
         else if ( type->Equals( Complex::typeid ) )
         {
-            COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) item;
+            auto pmcScalar = ( LPCOMPLEXSCALAR ) item;
 
             args[n] = Complex( pmcScalar->real, pmcScalar->imag );
         }
@@ -84,7 +73,7 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
         {
             if ( item == nullptr ) return E_FAIL;
 
-            COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
+            auto pmcArray = ( LPCOMPLEXARRAY ) item;
 
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
@@ -99,7 +88,7 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
             bool bReal = pmcArray->hReal != nullptr;
             bool bImag = pmcArray->hImag != nullptr;
 
-            array<Complex, 2> ^ matrix = gcnew array<Complex, 2>( rows, cols );
+            auto matrix = gcnew array<Complex, 2>( rows, cols );
 
             for ( int row = 0; row < rows; row++ )
             {
@@ -188,12 +177,12 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
     // String to MCSTRING.
     if ( type->Equals( String::typeid ) )
     {
-        MCSTRING * pmcString = ( MCSTRING * ) result;
+        auto pmcString = ( LPMCSTRING ) result;
 
         // .net unicode to ansi std::string.
         std::string text = marshal_as< std::string >( ( String ^ ) lvalue );
 
-        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( text.size() + 1 );
+        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.size() + 1u );
 
         // std::string to char[].
         ::memcpy( pmcString->str, text.c_str(), text.size() );
@@ -202,7 +191,7 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         pmcString->str[ text.size() ] = '\0';
 
         /*
-        array<Byte> ^ bytes = Encoding::UTF8->GetBytes( ( String ^ ) result );
+        auto bytes = Encoding::UTF8->GetBytes( ( String ^ ) lvalue );
 
         pmcString->str = ( char * ) ::MathcadAllocate( bytes->Length + 1 );
 
@@ -213,7 +202,7 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
     // Complex to COMPLEXSCALAR.
     else if ( type->Equals( Complex::typeid ) )
     {
-        COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) result;
+        auto pmcScalar = ( LPCOMPLEXSCALAR ) result;
 
         Complex cmplx = ( Complex ) lvalue;
 
@@ -262,7 +251,7 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
 
         // The first parameter for the MathcadArrayAllocate() function
         // must be pointer to the COMPLEXARRAY structure.
-        COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) result;
+        auto pmcArray = ( LPCOMPLEXARRAY ) result;
 
         MathcadEfi.MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
 
@@ -297,11 +286,7 @@ LRESULT UserFunction( PVOID items[] )
     {
         auto assemblyInfo = Manager::Assemblies[ AssemblyId ];
 
-        if ( assemblyInfo == nullptr ) throw gcnew Exception();
-
         auto func = assemblyInfo->Functions[ FunctionId ];
-
-        if ( func == nullptr ) throw gcnew Exception();
 
         // Get the count of parameters.
         int count = func->Info->ArgTypes->GetLength(0);
@@ -331,6 +316,15 @@ LRESULT UserFunction( PVOID items[] )
     }
 
     return S_OK;
+}
+
+
+void RegisterFunctions()
+{
+    // Prepare managed code. Setup our resolver for assembly loading.
+    AppDomain::CurrentDomain->AssemblyResolve += gcnew ResolveEventHandler( Manager::OnAssemblyResolve );
+
+    if ( Manager::LoadAssemblies() ) Manager::RegisterFunctions();
 }
 
 #pragma unmanaged
