@@ -37,34 +37,9 @@ void RegisterFunctions()
 }
 
 
-// General function.
-LRESULT UserFunction( PVOID items[] )
-{   
-    AssemblyInfo ^ assemblyInfo = nullptr;
-    IFunction ^ func = nullptr;
-
-    try
-    {
-        assemblyInfo = Manager::Assemblies[ AssemblyId ];
-
-        if ( assemblyInfo == nullptr ) throw gcnew Exception();
-
-        func = assemblyInfo->Functions[ FunctionId ];
-
-        if ( func == nullptr ) throw gcnew Exception();
-    }
-    catch ( ... )
-    {
-        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", AssemblyId, FunctionId );
-
-        return E_FAIL;
-    }
-
-    // Get the count of parameters.
+LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % args )
+{
     int count = func->Info->ArgTypes->GetLength(0);
-
-    // Create an array of managed function parameters.
-    array < Object ^ > ^ args = gcnew array < Object ^ >( count );
 
     // Convert each parameter to managed type.
     for ( int n = 0; n < count; n++ )
@@ -73,7 +48,7 @@ LRESULT UserFunction( PVOID items[] )
 
         void * item = items[ n + 1 ];
 
-        // MCSTRING
+        // MCSTRING to String.
         // It seems that MCSTRING contains only one byte from unicode wchar.
         if ( type->Equals( String::typeid ) )
         {
@@ -96,7 +71,7 @@ LRESULT UserFunction( PVOID items[] )
             */
         }
 
-        // COMPLEXSCALAR
+        // COMPLEXSCALAR to Complex;
         else if ( type->Equals( Complex::typeid ) )
         {
             COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) item;
@@ -104,13 +79,22 @@ LRESULT UserFunction( PVOID items[] )
             args[n] = Complex( pmcScalar->real, pmcScalar->imag );
         }
 
-        // COMPLEXARRAY
+        // COMPLEXARRAY to Complex[,].
         else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
+            if ( item == nullptr ) return E_FAIL;
+
             COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
 
             int rows = pmcArray->rows;
             int cols = pmcArray->cols;
+
+            if ( rows < 1 || cols < 1 )
+            {
+                Manager::LogError( "'{0}': wrong dimension for {1} argument: {2}x{3}", func->Info->Name, n, rows, cols );
+
+                return E_FAIL;
+            }
 
             bool bReal = pmcArray->hReal != nullptr;
             bool bImag = pmcArray->hImag != nullptr;
@@ -132,31 +116,37 @@ LRESULT UserFunction( PVOID items[] )
         }
         else
         {
-            Manager::LogError( "'{0}' Unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() );
+            Manager::LogError( "'{0}': unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() );
 
             return E_FAIL;
         }
     }
-    
-    Object ^ result;    
+
+    return S_OK;
+}
+
+
+LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, array < String ^ > ^ errors, Object ^ % lvalue )
+{
+    int count = func->Info->ArgTypes->GetLength(0);
 
     // Call the user function.
     try
     {
         auto context = gcnew Context();
 
-        if ( !func->NumericEvaluation( args, result, context ) ) return E_FAIL;
+        if ( !func->NumericEvaluation( args, lvalue, context ) ) return E_FAIL;
     }
     catch ( EFIException ^ ex )
     {
-        if ( assemblyInfo->Errors == nullptr )
+        if ( errors == nullptr )
         {
             Manager::LogError( "'{0}' {1}", func->Info->Name, "Errors table is empty" );
 
             return E_FAIL;
         }
 
-        if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= assemblyInfo->Errors->GetLength(0) )
+        if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= errors->GetLength(0) )
             && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= count ) )
         {
             // Calculate the error table location.
@@ -174,29 +164,34 @@ LRESULT UserFunction( PVOID items[] )
         }
         else
         {
-            Manager::LogError( "'{0}' {1}", func->Info->Name, ex->Message );
+            Manager::LogError( "'{0}': {1}", func->Info->Name, ex->Message );
 
             return E_FAIL;
         }
     }
     catch ( System::Exception ^ ex )
     {
-        Manager::LogError( "'{0}' {1}", func->Info->Name, ex->Message );
+        Manager::LogError( "'{0}': {1}", func->Info->Name, ex->Message );
 
         return E_FAIL;
     }
 
-    // Convert the result.
-    Type ^ type = result->GetType();
-    void * item = items[0];
+    return S_OK;
+}
 
-    // MCSTRING
+
+LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
+{
+    // Convert the result.
+    Type ^ type = lvalue->GetType();
+
+    // String to MCSTRING.
     if ( type->Equals( String::typeid ) )
     {
-        MCSTRING * pmcString = ( MCSTRING * ) item;
+        MCSTRING * pmcString = ( MCSTRING * ) result;
 
         // .net unicode to ansi std::string.
-        std::string text = marshal_as< std::string >( ( String ^ ) result );
+        std::string text = marshal_as< std::string >( ( String ^ ) lvalue );
 
         pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( text.size() + 1 );
 
@@ -215,24 +210,38 @@ LRESULT UserFunction( PVOID items[] )
         */
     }
 
-    // COMPLEXSCALAR
+    // Complex to COMPLEXSCALAR.
     else if ( type->Equals( Complex::typeid ) )
     {
-        COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) item;
+        COMPLEXSCALAR * pmcScalar = ( COMPLEXSCALAR * ) result;
 
-        Complex cmplx = ( Complex ) result;
+        Complex cmplx = ( Complex ) lvalue;
 
         pmcScalar->real = cmplx.Real;
         pmcScalar->imag = cmplx.Imaginary;
     }
 
-    // COMPLEXARRAY
+    // Complex[,] to COMPLEXARRAY.
     else if ( type->Equals( array<Complex, 2>::typeid ) )
     {
-        array<Complex, 2> ^ matrix = ( array<Complex, 2> ^ ) result;
+        auto matrix = ( array<Complex, 2> ^ ) lvalue;
+
+        if ( matrix == nullptr )
+        {
+            Manager::LogError( "'{0}': return value is NULL", func->Info->Name );
+
+            return E_FAIL;
+        }
 
         int rows = matrix->GetLength(0);
         int cols = matrix->GetLength(1);
+
+        if ( rows < 1 || cols < 1 )
+        {
+            Manager::LogError( "'{0}': wrong return value: [{1}x{2}]", func->Info->Name, rows, cols );
+
+            return E_FAIL;
+        }
 
         bool bImag = false;
 
@@ -253,7 +262,7 @@ LRESULT UserFunction( PVOID items[] )
 
         // The first parameter for the MathcadArrayAllocate() function
         // must be pointer to the COMPLEXARRAY structure.
-        COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) item;
+        COMPLEXARRAY * pmcArray = ( COMPLEXARRAY * ) result;
 
         MathcadEfi.MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
 
@@ -272,7 +281,51 @@ LRESULT UserFunction( PVOID items[] )
     }
     else
     {
-        Manager::LogError( "'{0}' Unknown return type: {1}", func->Info->Name, type->ToString() );
+        Manager::LogError( "'{0}': unknown return type: {1}", func->Info->Name, type->ToString() );
+
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+
+// General function.
+LRESULT UserFunction( PVOID items[] )
+{   
+    try
+    {
+        auto assemblyInfo = Manager::Assemblies[ AssemblyId ];
+
+        if ( assemblyInfo == nullptr ) throw gcnew Exception();
+
+        auto func = assemblyInfo->Functions[ FunctionId ];
+
+        if ( func == nullptr ) throw gcnew Exception();
+
+        // Get the count of parameters.
+        int count = func->Info->ArgTypes->GetLength(0);
+
+        // Create an array of managed function parameters.
+        auto args = gcnew array < Object ^ >( count );
+
+        auto result = ConvertInputs( func, items, args );
+
+        if ( result != S_OK ) return result;
+
+        Object ^ lvalue;
+
+        result = Evaluate( func, args, assemblyInfo->Errors, lvalue );
+
+        if ( result != S_OK ) return result;
+
+        result = ConvertOutput( func, lvalue, items[0] );
+
+        if ( result != S_OK ) return result;
+    }
+    catch ( ... )
+    {
+        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", AssemblyId, FunctionId );
 
         return E_FAIL;
     }
