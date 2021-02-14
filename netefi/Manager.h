@@ -6,6 +6,9 @@ class CMathcadEfi
 {
 public:
     bool Attached;
+    int AssemblyId;
+    int FunctionId;
+    PBYTE DynamicCode;
 
     PCREATE_USER_FUNCTION CreateUserFunction;
     PCREATE_USER_ERROR_MESSAGE_TABLE CreateUserErrorMessageTable;

@@ -23,8 +23,6 @@
 using namespace msclr::interop;
 using namespace NetEFI;
 
-extern int AssemblyId;
-extern int FunctionId;
 extern CMathcadEfi MathcadEfi;
 
 
@@ -141,7 +139,7 @@ LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, array < String ^ 
             // Calculate the error table location.
             int offset = 0;
 
-            for ( int n = 0; n < AssemblyId; n++ )
+            for ( int n = 0; n < MathcadEfi.AssemblyId; n++ )
             {                
                 auto assembly = Manager::Assemblies[n];
 
@@ -182,18 +180,18 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         // .net unicode to ansi std::string.
         std::string text = marshal_as< std::string >( ( String ^ ) lvalue );
 
-        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.size() + 1u );
+        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.length() + 1u );
 
         // std::string to char[].
-        ::memcpy( pmcString->str, text.c_str(), text.size() );
+        ::memcpy( pmcString->str, text.c_str(), text.length() );
         
         // Null terminate.
-        pmcString->str[ text.size() ] = '\0';
+        pmcString->str[ text.length() ] = '\0';
 
         /*
         auto bytes = Encoding::UTF8->GetBytes( ( String ^ ) lvalue );
 
-        pmcString->str = ( char * ) ::MathcadAllocate( bytes->Length + 1 );
+        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( bytes->Length + 1 );
 
         Marshal::Copy( bytes, 0, IntPtr( pmcString->str ), bytes->Length );
         */
@@ -284,9 +282,9 @@ LRESULT UserFunction( PVOID items[] )
 {   
     try
     {
-        auto assemblyInfo = Manager::Assemblies[ AssemblyId ];
+        auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
 
-        auto func = assemblyInfo->Functions[ FunctionId ];
+        auto func = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
 
         // Get the count of parameters.
         int count = func->Info->ArgTypes->GetLength(0);
@@ -310,7 +308,7 @@ LRESULT UserFunction( PVOID items[] )
     }
     catch ( ... )
     {
-        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", AssemblyId, FunctionId );
+        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", MathcadEfi.AssemblyId, MathcadEfi.FunctionId );
 
         return E_FAIL;
     }

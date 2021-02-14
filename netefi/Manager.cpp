@@ -10,20 +10,21 @@ extern LRESULT CallbackFunction( void * out, ... );
 #define MAX_FUNCTIONS_COUNT     10000UL
 #define DYNAMIC_BLOCK_SIZE      40U
 
-int AssemblyId = -1;
-int FunctionId = -1;
-PBYTE DynamicCode = nullptr;
 CMathcadEfi MathcadEfi;
 
 CMathcadEfi::CMathcadEfi()
 {
-    String ^ path = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
+    AssemblyId = -1;
+    FunctionId = -1;
+    DynamicCode = nullptr;
 
-    if ( File::Exists( path ) )
+    auto moduleName = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
+
+    if ( File::Exists( moduleName ) )
     {        
         marshal_context context;
 
-        HMODULE hLib = ::LoadLibraryW( context.marshal_as<LPCWSTR>( path ) );
+        HMODULE hLib = ::GetModuleHandleW( context.marshal_as<LPCWSTR>( moduleName ) );
 
         if ( hLib != NULL )
         {            
@@ -37,12 +38,12 @@ CMathcadEfi::CMathcadEfi()
         }
         else
         {
-            Manager::LogError( "[LoadLibrary] returns NULL." );
+            Manager::LogError( "Can't get module handle for mcaduser.dll." );
         }
     }
     else
     {
-        Manager::LogError( "File not found: {0}", path );
+        Manager::LogError( "File not found: {0}", moduleName );
     }
 
     Attached = ( CreateUserFunction != nullptr && CreateUserErrorMessageTable != nullptr
@@ -56,7 +57,7 @@ CMathcadEfi::~CMathcadEfi()
 {
     try
     {
-        if ( ::DynamicCode != nullptr ) ::VirtualFreeEx( ::GetCurrentProcess(), ::DynamicCode, 0, MEM_RELEASE );
+        if ( DynamicCode != nullptr ) ::VirtualFreeEx( ::GetCurrentProcess(), DynamicCode, 0, MEM_RELEASE );
 
         if ( File::Exists( Manager::LogFile ) ) File::Delete( Manager::LogFile );
     }
@@ -72,9 +73,7 @@ void Manager::Log( String ^ text )
     {
         File::AppendAllText( LogFile, text, Encoding::UTF8 );
     }
-    catch ( ... )
-    {
-    }
+    catch ( ... ) {}
 }
 
 
@@ -166,7 +165,7 @@ bool Manager::Initialize()
 // http://stackoverflow.com/questions/367761/how-to-determine-whether-a-dll-is-a-managed-assembly-or-native-prevent-loading
 bool Manager::IsManagedAssembly( String ^ fileName )
 {
-    Stream ^ fileStream = gcnew FileStream( fileName, IO::FileMode::Open, IO::FileAccess::Read );
+    Stream ^ fileStream = gcnew FileStream( fileName, FileMode::Open, FileAccess::Read );
 
     BinaryReader ^ binaryReader = gcnew BinaryReader( fileStream );
 
@@ -218,6 +217,8 @@ bool Manager::IsManagedAssembly( String ^ fileName )
 
 void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 {
+    marshal_context context;
+
     int count = errors->GetLength(0);
 
     char ** errorMessages = new char * [ count ];
@@ -226,16 +227,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
     {
         String ^ text = errors[n];
 
-        std::string s = marshal_as<std::string>( text );
-
-        char * msgItem = MathcadEfi.MathcadAllocate( ( unsigned ) s.length() + 1 );
-
-        errorMessages[n] = msgItem;
-
-        ::memset( msgItem, 0, s.length() + 1 );
-
-        // Copy string from the temporery buffer.
-        ::memcpy( msgItem, s.c_str(), s.length() );
+        errorMessages[n] = ( char * ) context.marshal_as<const char *>( text );
     }
 
     // Copy table content to the inner memory.
@@ -243,9 +235,6 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
     {
         LogError( "[CreateUserErrorMessageTable] failed" );
     }
-
-    // Free allocated memory.
-    for ( int n = 0; n < count; n++ ) MathcadEfi.MathcadFree( errorMessages[n] );
 
     delete[] errorMessages;
 }
@@ -256,6 +245,12 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
     FUNCTIONINFO fi;
 
     marshal_context context;
+
+    auto types = gcnew Dictionary<Type ^, unsigned long>();
+
+    types->Add( String::typeid, STRING );
+    types->Add( Complex::typeid, COMPLEX_SCALAR );
+    types->Add( array<Complex, 2>::typeid, COMPLEX_ARRAY );
 
     try
     {
@@ -272,24 +267,14 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 
         Type ^ type = info->ReturnType;
 
-        if ( type->Equals( String::typeid ) )
-        {
-            fi.returnType = STRING;
-        }
-        else if ( type->Equals( Complex::typeid ) )
-        {
-            fi.returnType = COMPLEX_SCALAR;
-        }
-        else if ( type->Equals( array<Complex, 2>::typeid ) )
-        {
-            fi.returnType = COMPLEX_ARRAY;
-        }
-        else
+        if ( !types->ContainsKey( type ) )
         {
             LogError( "[{0}] Unknown return type: {1}", info->Name, type->ToString() );
 
             return nullptr;
         }
+
+        fi.returnType = types[ type ];
 
         fi.nArgs = info->ArgTypes->GetLength(0);
 
@@ -311,24 +296,14 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
         {
             type = info->ArgTypes[m];
 
-            if ( type->Equals( String::typeid ) )
-            {
-                fi.argType[m] = STRING;
-            }
-            else if ( type->Equals( Complex::typeid ) )
-            {
-                fi.argType[m] = COMPLEX_SCALAR;
-            }
-            else if ( type->Equals( array<Complex, 2>::typeid ) )
-            {
-                fi.argType[m] = COMPLEX_ARRAY;
-            }
-            else
+            if ( !types->ContainsKey( type ) )
             {
                 LogError( "[{0}] Unknown argument type {1}: {2}", info->Name, m, type->ToString() );
 
                 return nullptr;
             }
+
+            fi.argType[m] = types[ type ];
         }
 
         return MathcadEfi.CreateUserFunction( ::GetModuleHandle( NULL ), & fi );
@@ -352,8 +327,8 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 
     // mov [AssemblyId], eax
     *p++ = 0xA3; 
-    ( int *& ) p[0] = & ::AssemblyId;
-    p += sizeof( int * );
+    ( int *& ) p[0] = & MathcadEfi.AssemblyId;
+    p += sizeof( void * );
 
     // mov eax, imm32
     *p++ = 0xB8; 
@@ -362,14 +337,14 @@ void Manager::InjectCode( PBYTE & p, int k, int n )
 
     // mov [FunctionId], eax
     *p++ = 0xA3; 
-    ( int *& ) p[0] = & ::FunctionId;
-    p += sizeof( int * );
+    ( int *& ) p[0] = & MathcadEfi.FunctionId;
+    p += sizeof( void * );
 
     // mov rax, CallbackFunction.
     *p++ = 0x48;
     *p++ = 0xB8;
     ( PBYTE & ) p[0] = ( PBYTE ) ::CallbackFunction;
-    p += sizeof( PBYTE );
+    p += sizeof( void * );
 
     // jmp rax.
     *p++ = 0xFF;
@@ -382,16 +357,16 @@ bool Manager::RegisterFunctions()
 {
     if ( Assemblies == nullptr ) return false;
 
+    int totalCount = 0;
+    PBYTE pCode = MathcadEfi.DynamicCode;
+    auto errorMessages = gcnew List<String ^>();
+
     try
     {
         // Register all functions in Mathcad.        
-        int totalCount = 0;
-        PBYTE pCode = DynamicCode;
-        auto errorMessages = gcnew List<String ^>();
-
         for ( int k = 0; k < Assemblies->Count; k++ )
         {
-            AssemblyInfo ^ assemblyInfo = Assemblies[k];
+            auto assemblyInfo = Assemblies[k];
 
             // Add error table.
             if ( assemblyInfo->Errors != nullptr )
@@ -405,9 +380,9 @@ bool Manager::RegisterFunctions()
             {
                 if ( totalCount >= MAX_FUNCTIONS_COUNT ) break;
 
-                String ^ lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
+                auto lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
 
-                FunctionInfo ^ info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
+                auto info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
 
                 if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
@@ -417,7 +392,7 @@ bool Manager::RegisterFunctions()
 
                 for each ( auto type in info->ArgTypes ) params->Add( type->ToString() );
 
-                String ^ text = ( info->Parameters->Length > 0 ) ? info->Parameters : String::Join( ",", params->ToArray() );
+                auto text = ( info->Parameters->Length > 0 ) ? info->Parameters : String::Join( ",", params->ToArray() );
 
                 text = String::Format( "[ {0} ] {1}", text, info->Description );
 
@@ -457,22 +432,19 @@ bool Manager::LoadAssemblies()
         auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
 
         // Find all types with IFunction interface.
-        for each ( String ^ path in libs )
+        for each ( auto path in libs )
         {
             try
             {
                 if ( !IsManagedAssembly( path ) ) continue;
 
-                AssemblyInfo ^ assemblyInfo = gcnew AssemblyInfo();
-
                 // LoadFile vs. LoadFrom
                 // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
-                Assembly ^ assembly = Assembly::LoadFile( path );
+                auto assembly = Assembly::LoadFile( path );
 
-                assemblyInfo->Path = path;
-                assemblyInfo->Functions = gcnew List< IFunction ^ >();
+                auto assemblyInfo = gcnew AssemblyInfo( path );
 
-                // Assembly и GetType().
+                // Assembly and GetType().
                 // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
                 for each ( Type ^ type in assembly->GetTypes() )
@@ -484,8 +456,7 @@ bool Manager::LoadAssemblies()
                     // Check if error table exists.
                     if ( assemblyInfo->Errors != nullptr ) continue;
 
-                    FieldInfo ^ errorsFieldInfo = type->GetField( gcnew String( "Errors" ),
-                        Reflection::BindingFlags::GetField | Reflection::BindingFlags::Static | Reflection::BindingFlags::Public );
+                    auto errorsFieldInfo = type->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
 
                     if ( errorsFieldInfo == nullptr ) continue;
 
@@ -506,12 +477,12 @@ bool Manager::LoadAssemblies()
         // максимального числа поддерживаемых функций.
         size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;
 
-        ::DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
+        MathcadEfi.DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
         // TODO: Handle errors.
-        if ( ::DynamicCode == nullptr )
+        if ( MathcadEfi.DynamicCode == nullptr )
         {
-            LogError( "Dynamic memory allocate failed." );
+            LogError( "Dynamic memory allocation failed." );
 
             return false;
         }
