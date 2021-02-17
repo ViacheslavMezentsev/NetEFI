@@ -62,13 +62,12 @@ namespace NetEFI
     {
     public:
         String ^ Path;
-        List < IFunction ^ > ^ Functions;
-        array < String ^ > ^ Errors;
+        List < Object ^ > ^ Functions;
 
         AssemblyInfo( String ^ path )
         {
             Path = path;
-            Functions = gcnew List< IFunction ^ >();
+            Functions = gcnew List< Object ^ >();
         }
     };
 }

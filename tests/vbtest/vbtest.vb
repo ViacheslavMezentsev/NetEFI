@@ -1,4 +1,5 @@
-﻿Imports System.Reflection
+﻿Imports System.Linq
+Imports System.Reflection
 Imports NetEFI
 
 Public Class vbtest
@@ -7,13 +8,13 @@ Public Class vbtest
     Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
 
         Get
-            Return New FunctionInfo("vbtest", "cmd", "return info", _
+            Return New FunctionInfo( "vbtest", "cmd", "return info", _
                 GetType(String), New Type() {GetType(String)})
         End Get
 
     End Property
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
 
         Return Info
 
@@ -22,35 +23,27 @@ Public Class vbtest
     Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
         Implements IFunction.NumericEvaluation
 
+        result = "help: info, list"
+
+        Dim assembl = Assembly.GetExecutingAssembly()
+
         Try
 
             Dim cmd = CType(args(0), String)
 
-            result = "help: info, list"
+            If cmd = "info" Then
 
-            If cmd.Equals( "info" ) Then
-
-                Dim name = Assembly.GetExecutingAssembly().GetName()
+                Dim name = assembl.GetName()
 
                 result = $"{name.Name}: {name.Version}"
 
-            ElseIf cmd.Equals( "list" ) Then
+            ElseIf cmd = "list" Then
 
-                Dim list = New List(Of String)()
+                Dim types = assembl.GetTypes().Where( Function(t) t.IsPublic AndAlso Not t.IsAbstract AndAlso GetType( IFunction ).IsAssignableFrom(t) )
 
-                Dim types = Assembly.GetExecutingAssembly().GetTypes()
+                Dim names = types.Select( Function(t) DirectCast( Activator.CreateInstance(t), IFunction ).Info.Name ).ToArray()
 
-                For Each type As Type In types
-
-                    If Not type.IsPublic OrElse type.IsAbstract OrElse Not GetType( IFunction ).IsAssignableFrom( type ) Then Continue For
-
-                    Dim f = DirectCast( Activator.CreateInstance( type ), IFunction )
-
-                    list.Add( f.Info.Name )
-
-                Next
-
-                result = String.Join(", ", list.ToArray())
+                result = String.Join( ", ", names )
 
             End If
 
@@ -58,6 +51,7 @@ Public Class vbtest
 
             result = Nothing
             Return False
+
         End Try
 
         Return True

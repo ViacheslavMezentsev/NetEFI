@@ -31,34 +31,37 @@ public:
 
     virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
     {
+        result = "help: info, list";
+
+        auto assembly = Assembly::GetExecutingAssembly();
+
         try
         {
-            String^ cmd = ( String^ ) args[0];
+            auto cmd = ( String^ ) args[0];
 
-            result = gcnew String( "help: info, list" );
-
-            if ( cmd->Equals( gcnew String("info") ) )
+            if ( cmd == "info" )
             {
-                auto name = Assembly::GetExecutingAssembly()->GetName();
+                auto name = assembly->GetName();
 
                 result = String::Format( "{0}: {1}", name->Name, name->Version );
             }
-            else if ( cmd->Equals( gcnew String("list") ) )
-            {
-                List<String^>^ list = gcnew List<String^>();
 
-                array<Type^>^ types = Assembly::GetExecutingAssembly()->GetTypes();
+            else if ( cmd == "list" )
+            {
+                auto list = gcnew List<String^>();
+
+                auto types = assembly->GetTypes();
 
                 for each ( Type^ type in types )
                 {
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    IFunction^ f = ( IFunction^ ) Activator::CreateInstance( type );
+                    auto f = ( IFunction^ ) Activator::CreateInstance( type );
                         
                     list->Add( f->Info->Name );
                 }
 
-                result = String::Join( gcnew String( ", " ), list->ToArray() );
+                result = String::Join( ", ", list->ToArray() );
             }
         }
         catch ( ... )

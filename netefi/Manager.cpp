@@ -109,9 +109,7 @@ Assembly ^ Manager::OnAssemblyResolve( Object ^ sender, ResolveEventArgs ^ args 
 
         if ( name->Equals( ExecAssembly->GetName()->Name ) ) return ExecAssembly;
 
-        name = name + ".dll";
-
-        LogInfo( "[OnAssemblyResolve] {0}", name );             
+        name = name + ".dll";        
 
         String ^ path = Path::Combine( AssemblyDirectory, name );
 
@@ -233,7 +231,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
     // Copy table content to the inner memory.
     if ( !MathcadEfi.CreateUserErrorMessageTable( ::GetModuleHandle( NULL ), count, errorMessages ) )
     {
-        LogError( "[CreateUserErrorMessageTable] failed" );
+        LogError( "Create user error messages table failed" );
     }
 
     delete[] errorMessages;
@@ -321,7 +319,7 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 void Manager::InjectCode( PBYTE & p, int k, int n )
 {
     // mov eax, imm32
-    *p++ = 0xB8; 
+    *p++ = 0xB8;
     p[0] = k;
     p += sizeof( int );
 
@@ -368,12 +366,6 @@ bool Manager::RegisterFunctions()
         {
             auto assemblyInfo = Assemblies[k];
 
-            // Add error table.
-            if ( assemblyInfo->Errors != nullptr )
-            {
-                errorMessages->AddRange( assemblyInfo->Errors );
-            }
-
             int count = 0;
 
             for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
@@ -382,7 +374,9 @@ bool Manager::RegisterFunctions()
 
                 auto lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
 
-                auto info = assemblyInfo->Functions[n]->GetFunctionInfo( lang );
+                auto funcobj = assemblyInfo->Functions[n];
+
+                auto info = ( ( IFunction ^ ) funcobj )->GetFunctionInfo( lang );
 
                 if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
@@ -399,7 +393,19 @@ bool Manager::RegisterFunctions()
                 LogInfo( "{0} - {1}", info->Name, text );
 
                 count++;
-                totalCount++;
+                totalCount++;                
+
+                auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
+
+                if ( errorsFieldInfo == nullptr ) continue;
+
+                try
+                {
+                    auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
+
+                    if ( errors != nullptr ) errorMessages->AddRange( errors );
+                }
+                catch (...) {}
             }
 
             LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
@@ -451,16 +457,7 @@ bool Manager::LoadAssemblies()
                 {
                     if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
-                    assemblyInfo->Functions->Add( ( IFunction ^ ) Activator::CreateInstance( type ) );
-
-                    // Check if error table exists.
-                    if ( assemblyInfo->Errors != nullptr ) continue;
-
-                    auto errorsFieldInfo = type->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
-
-                    if ( errorsFieldInfo == nullptr ) continue;
-
-                    assemblyInfo->Errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
+                    assemblyInfo->Functions->Add( Activator::CreateInstance( type ) );
                 }
 
                 if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );

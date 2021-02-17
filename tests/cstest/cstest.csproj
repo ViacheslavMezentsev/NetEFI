@@ -73,7 +73,6 @@
     <Compile Include="cstest3.cs" />
     <Compile Include="csecho.cs" />
     <Compile Include="cstranspose.cs" />
-    <Compile Include="errors.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

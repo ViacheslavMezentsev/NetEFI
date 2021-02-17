@@ -20,7 +20,6 @@
 #include "Context.h"
 #include "Manager.h"
 
-using namespace msclr::interop;
 using namespace NetEFI;
 
 extern CMathcadEfi MathcadEfi;
@@ -37,69 +36,33 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
 
         void * item = items[ n + 1 ];
 
-        // MCSTRING to String.
-        // It seems that MCSTRING contains only one byte from unicode wchar.
         if ( type->Equals( String::typeid ) )
         {           
-            // ANSI char[] to std::string.
-            std::string text( ( ( LPMCSTRING ) item )->str );
-
-            // std::string to .net unicode.
-            args[n] = marshal_as<String ^>( text );
-            
-            /*
-            size_t len = strlen( pmcString->str );
-
-            auto bytes = gcnew array<Byte>( len );
-
-            Marshal::Copy( IntPtr( pmcString->str ), bytes, 0, bytes->Length );
-
-            args[n] = UTF8Encoding::UTF8->GetString( bytes );           
-            */
+            args[n] = ( String^ ) ( * ( LPMCSTRING ) item );
         }
 
-        // COMPLEXSCALAR to Complex;
         else if ( type->Equals( Complex::typeid ) )
         {
-            auto pmcScalar = ( LPCOMPLEXSCALAR ) item;
-
-            args[n] = Complex( pmcScalar->real, pmcScalar->imag );
+            args[n] = ( Complex ) ( * ( LPCOMPLEXSCALAR ) item );
         }
 
-        // COMPLEXARRAY to Complex[,].
         else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
             if ( item == nullptr ) return E_FAIL;
 
             auto pmcArray = ( LPCOMPLEXARRAY ) item;
 
-            int rows = pmcArray->rows;
-            int cols = pmcArray->cols;
+            unsigned int rows = pmcArray->rows;
+            unsigned int cols = pmcArray->cols;
 
-            if ( rows < 1 || cols < 1 )
+            if ( rows == 0 || cols == 0 )
             {
                 Manager::LogError( "'{0}': wrong dimension for {1} argument: {2}x{3}", func->Info->Name, n, rows, cols );
 
                 return E_FAIL;
             }
 
-            bool bReal = pmcArray->hReal != nullptr;
-            bool bImag = pmcArray->hImag != nullptr;
-
-            auto matrix = gcnew array<Complex, 2>( rows, cols );
-
-            for ( int row = 0; row < rows; row++ )
-            {
-                for ( int col = 0; col < cols; col++ )
-                {
-                    double re = bReal ? pmcArray->hReal[ col ][ row ] : 0;
-                    double im = bImag ? pmcArray->hImag[ col ][ row ] : 0;
-
-                    matrix[ row, col ] = Complex( re, im );
-                }
-            }
-
-            args[n] = matrix;
+            args[n] = ( array<Complex, 2>^ ) ( * pmcArray );
         }
         else
         {
@@ -113,10 +76,8 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
 }
 
 
-LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, array < String ^ > ^ errors, Object ^ % lvalue )
+LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, Object ^ % lvalue )
 {
-    int count = func->Info->ArgTypes->GetLength(0);
-
     // Call the user function.
     try
     {
@@ -126,35 +87,60 @@ LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, array < String ^ 
     }
     catch ( EFIException ^ ex )
     {
-        if ( errors == nullptr )
+        int offset = 0;
+
+        for ( int k = 0; k <= MathcadEfi.AssemblyId; k++ )
         {
-            Manager::LogError( "'{0}' {1}", func->Info->Name, "Errors table is empty" );
+            auto assemblyInfo = Manager::Assemblies[k];
 
-            return E_FAIL;
-        }
+            for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
+            {
+                if ( k == MathcadEfi.AssemblyId && n >= MathcadEfi.FunctionId ) break;
 
-        if ( ( ex->ErrNum > 0 ) && ( ex->ErrNum <= errors->GetLength(0) )
-            && ( ex->ArgNum > 0 ) && ( ex->ArgNum <= count ) )
-        {
-            // Calculate the error table location.
-            int offset = 0;
+                auto funcobj = assemblyInfo->Functions[n];
 
-            for ( int n = 0; n < MathcadEfi.AssemblyId; n++ )
-            {                
-                auto assembly = Manager::Assemblies[n];
+                auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
 
-                offset += assembly->Errors == nullptr ? 0 : assembly->Errors->GetLength(0);
+                if ( errorsFieldInfo == nullptr ) continue;
+
+                try
+                {
+                    auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
+
+                    if ( errors != nullptr ) offset += errors->GetLength(0);
+                }
+                catch ( ... ) {}
             }
-
-            // See Mathcad Developer Reference for the details.
-            return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
         }
-        else
+
+        auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
+
+        auto funcobj = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
+
+        auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
+
+        if ( errorsFieldInfo != nullptr )
         {
-            Manager::LogError( "'{0}': {1}", func->Info->Name, ex->Message );
+            auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
 
-            return E_FAIL;
+            if ( errors != nullptr ) 
+            {
+                if ( ex->ErrNum > 0 && ex->ErrNum <= errors->GetLength(0) )
+                {
+                    int count = func->Info->ArgTypes->GetLength(0);
+
+                    if ( ex->ArgNum < 0 || ex->ArgNum > count ) ex->ArgNum = 0;
+
+                    // See Mathcad Developer Reference for the details.
+                    return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
+                }
+                else Manager::LogError( "'{0}': can't find error message ({1})", func->Info->Name, ex->ErrNum );
+            }
+            else Manager::LogError( "'{0}': error table is null", func->Info->Name );
         }
+        else Manager::LogError( "'{0}': can't find error table", func->Info->Name );
+
+        return E_FAIL;
     }
     catch ( System::Exception ^ ex )
     {
@@ -178,15 +164,12 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         auto pmcString = ( LPMCSTRING ) result;
 
         // .net unicode to ansi std::string.
-        std::string text = marshal_as< std::string >( ( String ^ ) lvalue );
+        std::string text = msclr::interop::marshal_as< std::string >( ( String ^ ) lvalue );
 
         pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.length() + 1u );
 
         // std::string to char[].
-        ::memcpy( pmcString->str, text.c_str(), text.length() );
-        
-        // Null terminate.
-        pmcString->str[ text.length() ] = '\0';
+        strcpy_s( pmcString->str, text.length() + 1u, ( const char * ) text.c_str() );
 
         /*
         auto bytes = Encoding::UTF8->GetBytes( ( String ^ ) lvalue );
@@ -220,10 +203,10 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
             return E_FAIL;
         }
 
-        int rows = matrix->GetLength(0);
-        int cols = matrix->GetLength(1);
+        unsigned int rows = matrix->GetLength(0);
+        unsigned int cols = matrix->GetLength(1);
 
-        if ( rows < 1 || cols < 1 )
+        if ( rows == 0 || cols == 0 )
         {
             Manager::LogError( "'{0}': wrong return value: [{1}x{2}]", func->Info->Name, rows, cols );
 
@@ -233,9 +216,9 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         bool bImag = false;
 
         // Check if imaginary part is empty.
-        for ( int row = 0; row < rows; row++ )
+        for ( unsigned int row = 0; row < rows; row++ )
         {
-            for ( int col = 0; col < cols; col++ )
+            for ( unsigned int col = 0; col < cols; col++ )
             {
                 if ( matrix[ row, col ].Imaginary != 0.0 )
                 {
@@ -253,9 +236,9 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
 
         MathcadEfi.MathcadArrayAllocate( pmcArray, rows, cols, TRUE, bImag ? TRUE : FALSE );
 
-        for ( int row = 0; row < rows; row++ )
+        for ( unsigned int row = 0; row < rows; row++ )
         {
-            for ( int col = 0; col < cols; col++ )
+            for ( unsigned int col = 0; col < cols; col++ )
             {
                 pmcArray->hReal[ col ][ row ] = matrix[ row, col ].Real;
 
@@ -284,7 +267,7 @@ LRESULT UserFunction( PVOID items[] )
     {
         auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
 
-        auto func = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
+        auto func = ( IFunction ^ ) assemblyInfo->Functions[ MathcadEfi.FunctionId ];
 
         // Get the count of parameters.
         int count = func->Info->ArgTypes->GetLength(0);
@@ -298,7 +281,7 @@ LRESULT UserFunction( PVOID items[] )
 
         Object ^ lvalue;
 
-        result = Evaluate( func, args, assemblyInfo->Errors, lvalue );
+        result = Evaluate( func, args, lvalue );
 
         if ( result != S_OK ) return result;
 

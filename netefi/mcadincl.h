@@ -1,10 +1,9 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif // __cplusplus
+#include <msclr\marshal_cppstd.h>
 
+using namespace System;
+using namespace System::Numerics;
 
 /*************************************
 *  Structure and function definitions
@@ -41,6 +40,9 @@ typedef struct tagCOMPLEXSCALAR
 {
     double real; // Contains the real part of a scalar.
     double imag; // Contains the imaginary part of a scalar.
+
+    operator Complex() { return Complex( real, imag ); }
+
 } COMPLEXSCALAR;
 
 // this is the complex scalar type received from mathcad
@@ -68,6 +70,27 @@ typedef struct tagCOMPLEXARRAY
     // NULL if the array has no imaginary component.
     double ** hImag; // hImag[cols][rows],  == NULL when the imaginary part is zero
 
+    operator array<Complex, 2>^()
+    {
+        bool bReal = hReal != nullptr;
+        bool bImag = hImag != nullptr;
+
+        auto matrix = gcnew array<Complex, 2>( rows, cols );
+
+        for ( unsigned int row = 0; row < rows; row++ )
+        {
+            for ( unsigned int col = 0; col < cols; col++ )
+            {
+                double re = bReal ? hReal[ col ][ row ] : 0;
+                double im = bImag ? hImag[ col ][ row ] : 0;
+
+                matrix[ row, col ] = Complex( re, im );
+            }
+        }
+
+        return matrix;
+    }
+
 } COMPLEXARRAY;
 
 // this is the complex array type received from mathcad
@@ -80,6 +103,26 @@ typedef COMPLEXARRAY * const LPCOMPLEXARRAY;
 typedef struct tagMCSTRING
 {
     char * str;
+
+    // It seems that MCSTRING contains only one byte from unicode wchar.
+    operator String ^()
+    {
+        /*
+        size_t len = strlen( pmcString->str );
+
+        auto bytes = gcnew array<Byte>( len );
+
+        Marshal::Copy( IntPtr( pmcString->str ), bytes, 0, bytes->Length );
+
+        return UTF8Encoding::UTF8->GetString( bytes );
+        */
+
+        // ANSI char[] to std::string.
+        std::string text( str );
+
+        // std::string to .net unicode.
+        return msclr::interop::marshal_as<String ^>( text );
+    }
 
 } MCSTRING;
 
@@ -127,7 +170,7 @@ typedef struct tagFUNCTIONINFO
 // The return value is a non-NULL handle if the registration is successful. 
 // Otherwise, it is NULL.
 //const void * CreateUserFunction( HINSTANCE, FUNCTIONINFO * );
-typedef void * ( *PCREATE_USER_FUNCTION ) ( HINSTANCE, FUNCTIONINFO * );
+typedef void * ( * PCREATE_USER_FUNCTION ) ( HINSTANCE, FUNCTIONINFO * );
 
 // CreateUserErrorMessageTable is called when the DLL is attaching to the address
 // space of the current process in order to register the user error message table with
@@ -141,18 +184,18 @@ typedef void * ( *PCREATE_USER_FUNCTION ) ( HINSTANCE, FUNCTIONINFO * );
 BOOL CreateUserErrorMessageTable( HINSTANCE hDLL,
     unsigned int nErrorMessages, char  * ErrorMessageTable[] );
 */
-typedef BOOL( *PCREATE_USER_ERROR_MESSAGE_TABLE ) ( HINSTANCE, unsigned int, char ** );
+typedef BOOL( * PCREATE_USER_ERROR_MESSAGE_TABLE ) ( HINSTANCE, unsigned int, char ** );
 
 // Should be used to allocate memory inside the MyCFunction. Allocates a memory block
 // of a given size (in bytes) of memory.
 //char * MathcadAllocate( unsigned int size );
-typedef char * ( *PMATHCAD_ALLOCATE ) ( unsigned int );
+typedef char * ( * PMATHCAD_ALLOCATE ) ( unsigned int );
 
 // Should be used to free memory allocated with MathcadAllocate. The argument
 // address points to the memory previously allocated with MathcadAllocate. A NULL
 // pointer argument is ignored.
 //void MathcadFree( char * address );
-typedef void ( *PMATHCAD_FREE ) ( char * );
+typedef void ( * PMATHCAD_FREE ) ( char * );
 
 
 // Allocates memory for a COMPLEXARRAY of cols columns and rows rows. Sets the hReal,
@@ -164,23 +207,15 @@ BOOL MathcadArrayAllocate(   COMPLEXARRAY * const,
                                 BOOL allocateReal,
                                 BOOL allocateImag );
 */
-typedef BOOL( *PMATHCAD_ARRAY_ALLOCATE ) ( COMPLEXARRAY *,
-    unsigned int,
-    unsigned int,
-    BOOL,
-    BOOL );
+typedef BOOL( * PMATHCAD_ARRAY_ALLOCATE ) ( COMPLEXARRAY *, unsigned int, unsigned int, BOOL, BOOL );
 
 // Frees memory that was allocated by the MathcadArrayAllocate function to the
 // hReal and hImag members of the argument array.
 //void MathcadArrayFree( COMPLEXARRAY * const );
-typedef void ( *PMATHCAD_ARRAY_FREE ) ( COMPLEXARRAY * const );
+typedef void ( * PMATHCAD_ARRAY_FREE ) ( COMPLEXARRAY * const );
 
 // The isUserInterrupted function is used to check whether a user has pressed the
 // [Esc] key. Include this function if you want to be able to interrupt your function like
 // other Mathcad functions.    
 //BOOL isUserInterrupted( void );
-typedef BOOL( *PIS_USER_INTERRUPTED ) ( void );
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+typedef BOOL( * PIS_USER_INTERRUPTED ) ( void );
