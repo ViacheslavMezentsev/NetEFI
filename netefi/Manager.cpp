@@ -20,36 +20,27 @@ CMathcadEfi::CMathcadEfi()
 
     auto moduleName = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
 
-    if ( File::Exists( moduleName ) )
-    {        
-        marshal_context context;
+    marshal_context context;
 
-        HMODULE hLib = ::GetModuleHandleW( context.marshal_as<LPCWSTR>( moduleName ) );
+    HMODULE hLib = ::GetModuleHandleW( context.marshal_as<LPCWSTR>( moduleName ) );
 
-        if ( hLib != NULL )
-        {            
-            CreateUserFunction = ( PCREATE_USER_FUNCTION ) ::GetProcAddress( hLib, "CreateUserFunction" );
-            CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE ) ::GetProcAddress( hLib, "CreateUserErrorMessageTable" );
-            MathcadAllocate = ( PMATHCAD_ALLOCATE ) ::GetProcAddress( hLib, "MathcadAllocate" );
-            MathcadFree = ( PMATHCAD_FREE ) ::GetProcAddress( hLib, "MathcadFree" );
-            MathcadArrayAllocate = ( PMATHCAD_ARRAY_ALLOCATE ) ::GetProcAddress( hLib, "MathcadArrayAllocate" );
-            MathcadArrayFree = ( PMATHCAD_ARRAY_FREE ) ::GetProcAddress( hLib, "MathcadArrayFree" );
-            isUserInterrupted = ( PIS_USER_INTERRUPTED ) ::GetProcAddress( hLib, "isUserInterrupted" );
-        }
-        else
-        {
-            Manager::LogError( "Can't get module handle for mcaduser.dll." );
-        }
+    if ( hLib != NULL )
+    {            
+        CreateUserFunction = ( PCREATE_USER_FUNCTION ) ::GetProcAddress( hLib, "CreateUserFunction" );
+        CreateUserErrorMessageTable = ( PCREATE_USER_ERROR_MESSAGE_TABLE ) ::GetProcAddress( hLib, "CreateUserErrorMessageTable" );
+        MathcadAllocate = ( PMATHCAD_ALLOCATE ) ::GetProcAddress( hLib, "MathcadAllocate" );
+        MathcadFree = ( PMATHCAD_FREE ) ::GetProcAddress( hLib, "MathcadFree" );
+        MathcadArrayAllocate = ( PMATHCAD_ARRAY_ALLOCATE ) ::GetProcAddress( hLib, "MathcadArrayAllocate" );
+        MathcadArrayFree = ( PMATHCAD_ARRAY_FREE ) ::GetProcAddress( hLib, "MathcadArrayFree" );
+        isUserInterrupted = ( PIS_USER_INTERRUPTED ) ::GetProcAddress( hLib, "isUserInterrupted" );
     }
     else
     {
-        Manager::LogError( "File not found: {0}", moduleName );
+        Manager::LogError( "Can't get module handle for mcaduser.dll." );
     }
 
-    Attached = ( CreateUserFunction != nullptr && CreateUserErrorMessageTable != nullptr
-        && MathcadAllocate != nullptr && MathcadFree != nullptr
-        && MathcadArrayAllocate != nullptr && MathcadArrayFree != nullptr
-        && isUserInterrupted != nullptr );
+    Attached = ( hLib && CreateUserFunction && CreateUserErrorMessageTable && MathcadAllocate && MathcadFree
+        && MathcadArrayAllocate && MathcadArrayFree && isUserInterrupted );
 }
 
 
@@ -219,13 +210,13 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
     int count = errors->GetLength(0);
 
-    char ** errorMessages = new char * [ count ];
+    PCHAR * errorMessages = new PCHAR[ count ];
 
     for ( int n = 0; n < count; n++ )
     {
         String ^ text = errors[n];
 
-        errorMessages[n] = ( char * ) context.marshal_as<const char *>( text );
+        errorMessages[n] = ( PCHAR ) context.marshal_as<const char *>( text );
     }
 
     // Copy table content to the inner memory.
@@ -240,7 +231,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 
 PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 {
-    FUNCTIONINFO fi;
+    FUNCTIONINFO fi {};
 
     marshal_context context;
 
@@ -315,38 +306,27 @@ PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
 }
 
 
+// mov eax, imm32
+#define imm2eax(x)  *p++ = 0xB8; ( int & ) p[0] = x; p += sizeof( int )
+
+// mov mem, eax
+#define eax2mem(y)  *p++ = 0xA3; ( void *& ) p[0] = & y; p += sizeof( void * )
+
+// mov mem, imm32
+#define imm2mem(x,y)    imm2eax(x); eax2mem(y);
+
+// mov rax, CallbackFunction
+// jmp rax
+#define jump(addr)  *p++ = 0x48; *p++ = 0xB8; ( PBYTE & ) p[0] = ( PBYTE ) addr; p += sizeof( void * ); *p++ = 0xFF; *p++ = 0xE0
+
 // The magic part is here.
-void Manager::InjectCode( PBYTE & p, int k, int n )
+void Manager::InjectCode( PBYTE & p, int assemblyId, int functionId )
 {
-    // mov eax, imm32
-    *p++ = 0xB8;
-    p[0] = k;
-    p += sizeof( int );
+    imm2mem( assemblyId, MathcadEfi.AssemblyId );
 
-    // mov [AssemblyId], eax
-    *p++ = 0xA3; 
-    ( int *& ) p[0] = & MathcadEfi.AssemblyId;
-    p += sizeof( void * );
+    imm2mem( functionId, MathcadEfi.FunctionId );
 
-    // mov eax, imm32
-    *p++ = 0xB8; 
-    p[0] = n;
-    p += sizeof( int );
-
-    // mov [FunctionId], eax
-    *p++ = 0xA3; 
-    ( int *& ) p[0] = & MathcadEfi.FunctionId;
-    p += sizeof( void * );
-
-    // mov rax, CallbackFunction.
-    *p++ = 0x48;
-    *p++ = 0xB8;
-    ( PBYTE & ) p[0] = ( PBYTE ) ::CallbackFunction;
-    p += sizeof( void * );
-
-    // jmp rax.
-    *p++ = 0xFF;
-    *p++ = 0xE0;
+    jump( ::CallbackFunction );
 }
 
 

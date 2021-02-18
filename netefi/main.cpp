@@ -36,6 +36,8 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
 
         void * item = items[ n + 1 ];
 
+        if ( item == nullptr ) return E_FAIL;
+
         if ( type->Equals( String::typeid ) )
         {           
             args[n] = ( String^ ) ( * ( LPMCSTRING ) item );
@@ -48,8 +50,6 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
 
         else if ( type->Equals( array<Complex, 2>::typeid ) )
         {
-            if ( item == nullptr ) return E_FAIL;
-
             auto pmcArray = ( LPCOMPLEXARRAY ) item;
 
             unsigned int rows = pmcArray->rows;
