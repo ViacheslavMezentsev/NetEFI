@@ -1,9 +1,11 @@
 #pragma once
 
-#include <msclr\marshal_cppstd.h>
+#include <msclr/marshal_cppstd.h>
 
 using namespace System;
+using namespace System::Text;
 using namespace System::Numerics;
+using namespace msclr::interop;
 
 /*************************************
 *  Structure and function definitions
@@ -107,21 +109,11 @@ typedef struct tagMCSTRING
     // It seems that MCSTRING contains only one byte from unicode wchar.
     operator String ^()
     {
-        /*
-        size_t len = strlen( pmcString->str );
-
-        auto bytes = gcnew array<Byte>( len );
-
-        Marshal::Copy( IntPtr( pmcString->str ), bytes, 0, bytes->Length );
-
-        return UTF8Encoding::UTF8->GetString( bytes );
-        */
-
         // ANSI char[] to std::string.
-        std::string text( str );
+        //std::string text( str );
 
         // std::string to .net unicode.
-        return msclr::interop::marshal_as<String ^>( text );
+        return marshal_as<String^>( str );
     }
 
 } MCSTRING;

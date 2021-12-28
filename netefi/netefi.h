@@ -1,14 +1,6 @@
 #pragma once
 
-using namespace System;
-using namespace System::Numerics;
-using namespace System::IO;
-using namespace System::Text;
-using namespace System::Reflection;
-using namespace System::Runtime::InteropServices;
-using namespace System::Diagnostics;
-using namespace System::Globalization;
-using namespace System::Collections::Generic;
+#include "stdafx.h"
 
 namespace NetEFI
 {

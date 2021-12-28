@@ -1,20 +1,16 @@
 #include "stdafx.h"
 
-using namespace System;
-using namespace System::Reflection;
-using namespace System::Runtime::InteropServices;
-
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly:AssemblyTitleAttribute(".Net Mathcad Extension")];
-[assembly:AssemblyDescriptionAttribute(".Net Mathcad Extension")];
-[assembly:AssemblyConfigurationAttribute("")];
-[assembly:AssemblyCompanyAttribute("Viacheslav N. Mezentsev (viacheslavmezentsev@ya.ru)")];
-[assembly:AssemblyProductAttribute(".Net Mathcad Extension")];
-[assembly:AssemblyCopyrightAttribute("Copyright © Viacheslav N. Mezentsev, 2014-2021")];
-[assembly:AssemblyTrademarkAttribute("")];
-[assembly:AssemblyCultureAttribute("")];
+[assembly:AssemblyTitle(".Net Mathcad Extension")];
+[assembly:AssemblyDescription(".Net Mathcad Extension")];
+[assembly:AssemblyConfiguration("")];
+[assembly:AssemblyCompany("Viacheslav N. Mezentsev (viacheslavmezentsev@ya.ru)")];
+[assembly:AssemblyProduct(".Net Mathcad Extension")];
+[assembly:AssemblyCopyright("Copyright (c) Viacheslav N. Mezentsev, 2014-2021")];
+[assembly:AssemblyTrademark("")];
+[assembly:AssemblyCulture("")];
 
 // Version information for an assembly consists of the following four values:
 //
@@ -25,7 +21,6 @@ using namespace System::Runtime::InteropServices;
 //
 // You can specify all the value or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
-[assembly:AssemblyVersionAttribute("0.2.*")];
+[assembly:AssemblyVersion("0.2.*")];
 [assembly:ComVisible(false)];
-[assembly:CLSCompliantAttribute(true)];
-//[assembly:SecurityPermission(SecurityAction::RequestMinimum, UnmanagedCode = true)];
+[assembly:CLSCompliant(true)];

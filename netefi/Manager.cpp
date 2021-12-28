@@ -1,8 +1,6 @@
 #include "stdafx.h"
-#include <msclr\marshal_cppstd.h>
 #include "Manager.h"
 
-using namespace msclr::interop;
 using namespace NetEFI;
 
 extern LRESULT CallbackFunction( void * out, ... );
@@ -435,7 +433,7 @@ bool Manager::LoadAssemblies()
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
                 for each ( Type ^ type in assembly->GetTypes() )
                 {
-                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+                    if ( !type->IsPublic || !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
 
                     assemblyInfo->Functions->Add( Activator::CreateInstance( type ) );
                 }

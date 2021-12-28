@@ -14,7 +14,6 @@
 // http://stackoverflow.com/questions/2410721/how-to-check-an-objects-type-in-c-cli
 
 #include "stdafx.h"
-#include <msclr\marshal_cppstd.h>
 #include "netefi.h"
 #include "mcadincl.h"
 #include "Context.h"
@@ -39,8 +38,8 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
         if ( item == nullptr ) return E_FAIL;
 
         if ( type->Equals( String::typeid ) )
-        {           
-            args[n] = ( String^ ) ( * ( LPMCSTRING ) item );
+        {                       
+            args[n] = ( String ^ ) ( * ( LPMCSTRING ) item );
         }
 
         else if ( type->Equals( Complex::typeid ) )
@@ -164,20 +163,12 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         auto pmcString = ( LPMCSTRING ) result;
 
         // .net unicode to ansi std::string.
-        std::string text = msclr::interop::marshal_as< std::string >( ( String ^ ) lvalue );
+        auto text = marshal_as< std::string >( ( String ^ ) lvalue );
 
         pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.length() + 1u );
 
         // std::string to char[].
         strcpy_s( pmcString->str, text.length() + 1u, ( const char * ) text.c_str() );
-
-        /*
-        auto bytes = Encoding::UTF8->GetBytes( ( String ^ ) lvalue );
-
-        pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( bytes->Length + 1 );
-
-        Marshal::Copy( bytes, 0, IntPtr( pmcString->str ), bytes->Length );
-        */
     }
 
     // Complex to COMPLEXSCALAR.
