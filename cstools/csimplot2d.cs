@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Numerics;
 
-using NetEFI;
+using NetEFI.Computables;
+using NetEFI.Design;
 
 /// <summary>
 /// Represtents a point in two-dimensional space. Used for representation
@@ -41,7 +42,7 @@ internal struct PointD
     }
 }
 
-public class csimplot2d : IFunction
+public class csimplot2d : IComputable
 {
     #region Private fields
 
@@ -233,7 +234,7 @@ public class csimplot2d : IFunction
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         double dx = ( ( Complex ) args[0] ).Real;
         double dy = ( ( Complex ) args[1] ).Real;

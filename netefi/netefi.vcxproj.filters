@@ -20,10 +20,10 @@
     <ClInclude Include="Manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Context.h">
+    <ClInclude Include="netefi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="netefi.h">
+    <ClInclude Include="ContextImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -37,7 +37,7 @@
     <ClCompile Include="Manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Context.cpp">
+    <ClCompile Include="ContextImpl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="netefi.cpp">

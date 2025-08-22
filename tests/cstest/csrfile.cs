@@ -1,13 +1,15 @@
 ﻿using System.IO;
-using NetEFI;
 
-public class csrfile: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class csrfile: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "csrfile", "file", "return file content", typeof( string ), new[] { typeof( string ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         result = "";
 

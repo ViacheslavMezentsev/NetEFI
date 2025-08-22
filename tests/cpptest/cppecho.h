@@ -3,9 +3,7 @@
 using namespace System;
 using namespace System::Text;
 
-using namespace NetEFI;
-
-public ref class cppecho: public IFunction
+public ref class cppecho : public IComputable
 {
 public:
 
@@ -23,7 +21,7 @@ public:
         return Info;
     }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
     {
         result = args[0];
 

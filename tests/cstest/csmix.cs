@@ -1,7 +1,9 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public class csmix: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class csmix: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "csmix", "m, direction", "return mixed array",
                 typeof( Complex[,] ), new[] { typeof( Complex[,] ), typeof( Complex ) } );
@@ -22,7 +24,7 @@ public class csmix: IFunction
         return ( byte ) ( w & 0xFF );
     }
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         var N = ( ( Complex[,] ) args[0] ).GetLength(0);
         var M = ( ( Complex[,] ) args[0] ).GetLength(1);

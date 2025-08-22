@@ -31,7 +31,7 @@ namespace NetEFI
         static void Log( String ^ );
         static void Log( String ^, ... array<Object ^> ^ );
         static bool IsManagedAssembly( String ^ );        
-        static PVOID CreateUserFunction( FunctionInfo ^, PVOID );
+        static PVOID CreateUserFunction( NetEFI::Design::FunctionInfo ^, PVOID );
         static void CreateUserErrorMessageTable( array < String ^ > ^ );
         static void InjectCode( PBYTE &, int, int );
 

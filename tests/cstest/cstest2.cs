@@ -1,16 +1,17 @@
 ﻿using System.Numerics;
 using System.Collections.Generic;
 
-using NetEFI;
+using NetEFI.Computables;
+using NetEFI.Design;
 
-public class cstest2: IFunction
+public class cstest2: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "cstest2", "separ, v", "return string: v[0] separ v[1] separ ...",
             typeof( string ), new[] { typeof( string ), typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         try
         {

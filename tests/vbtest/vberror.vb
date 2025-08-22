@@ -1,9 +1,11 @@
 ﻿Imports System.Numerics
-Imports NetEFI
+Imports NetEFI.Computables
+Imports NetEFI.Design
+Imports NetEFI.Runtime
 
 
 Public Class vberror
-    Implements IFunction
+    Implements IComputable
 
     Public Shared Errors As String() = _
     { _
@@ -13,23 +15,23 @@ Public Class vberror
         "vberror: text example 4" _
     }
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
         Get
-            Return New FunctionInfo("vberror", "n", "return error string", _
+            Return New FunctionInfo("vberror", "n", "return error string",
                     GetType(String), New Type() {GetType(Complex)})
         End Get
 
     End Property
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
         Return Info
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
-        Throw New EFIException( CType( args(0), Complex ).Real, 1 )
+        Throw New EFIException(CType(args(0), Complex).Real, 1)
 
     End Function
 

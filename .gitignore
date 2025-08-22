@@ -156,3 +156,6 @@ $RECYCLE.BIN/
 .DS_Store
 /tests/cstest/mathcad/netefi.dll
 /tests/vbtest/mathcad/netefi.dll
+*.vs
+
+.fake

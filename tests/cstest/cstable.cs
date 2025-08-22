@@ -1,8 +1,10 @@
 ﻿using System.Numerics;
 using System.Collections.Generic;
-using NetEFI;
 
-public class cstable: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class cstable: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "cstable", "x", "return table of frequenses n x m",
         typeof( Complex[,] ), new[] { typeof( Complex ) } );
@@ -23,7 +25,7 @@ public class cstable: IFunction
         return ( byte ) ( w & 0xFF );
     }
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         x = 1;
         y = 0;

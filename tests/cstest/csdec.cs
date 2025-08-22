@@ -1,13 +1,15 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public class csdec: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class csdec: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "csdec", "m", "decoder", typeof( Complex[,] ), new[] { typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         var N = ( ( Complex[,] ) args[0] ).GetLength(0);
 

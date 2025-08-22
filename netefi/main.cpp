@@ -16,15 +16,15 @@
 #include "stdafx.h"
 #include "netefi.h"
 #include "mcadincl.h"
-#include "Context.h"
 #include "Manager.h"
+#include "ContextImpl.h"
 
 using namespace NetEFI;
 
 extern CMathcadEfi MathcadEfi;
 
 
-LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % args )
+LRESULT ConvertInputs( IComputable ^ func, PVOID items[], array < Object ^ > ^ % args )
 {
     int count = func->Info->ArgTypes->GetLength(0);
 
@@ -35,11 +35,14 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
 
         void * item = items[ n + 1 ];
 
-        if ( item == nullptr ) return E_FAIL;
+        if ( item == nullptr ) throw gcnew System::Exception( String::Format( "'{0}': argument {1} is NULL", func->Info->Name, n ) );
 
+		// Convert to String, Complex or Complex array type.
         if ( type->Equals( String::typeid ) )
-        {                       
-            args[n] = ( String ^ ) ( * ( LPMCSTRING ) item );
+        {
+            auto mcstr = static_cast<LPMCSTRING>( item );
+
+            args[n] = safe_cast<String^>( *mcstr );
         }
 
         else if ( type->Equals( Complex::typeid ) )
@@ -55,34 +58,26 @@ LRESULT ConvertInputs( IFunction ^ func, PVOID items[], array < Object ^ > ^ % a
             unsigned int cols = pmcArray->cols;
 
             if ( rows == 0 || cols == 0 )
-            {
-                Manager::LogError( "'{0}': wrong dimension for {1} argument: {2}x{3}", func->Info->Name, n, rows, cols );
-
-                return E_FAIL;
-            }
+                throw gcnew System::Exception( String::Format( "'{0}': wrong dimension for {1} argument: {2}x{3}", func->Info->Name, n, rows, cols ) );
 
             args[n] = ( array<Complex, 2>^ ) ( * pmcArray );
         }
-        else
-        {
-            Manager::LogError( "'{0}': unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() );
-
-            return E_FAIL;
-        }
+        else throw gcnew System::Exception( String::Format( "'{0}': unknown argument type {1}: {2}", func->Info->Name, n, type->ToString() ) );
     }
 
     return S_OK;
 }
 
 
-LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, Object ^ % lvalue )
+LRESULT Evaluate( IComputable ^ func, array < Object ^ > ^ args, Object ^ % lvalue )
 {
     // Call the user function.
     try
     {
-        auto context = gcnew Context();
+        ContextImpl^ context = gcnew ContextImpl();
 
-        if ( !func->NumericEvaluation( args, lvalue, context ) ) return E_FAIL;
+        if ( !func->NumericEvaluation( args, lvalue, context ) )
+            throw gcnew System::Exception( String::Format( "'{0}': numeric evaluation failed", func->Info->Name ) );
     }
     catch ( EFIException ^ ex )
     {
@@ -91,6 +86,9 @@ LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, Object ^ % lvalue
         for ( int k = 0; k <= MathcadEfi.AssemblyId; k++ )
         {
             auto assemblyInfo = Manager::Assemblies[k];
+
+			// Skip assemblies that are not loaded or have no functions.
+            if ( assemblyInfo == nullptr || assemblyInfo->Functions == nullptr ) continue;
 
             for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
             {
@@ -112,47 +110,42 @@ LRESULT Evaluate( IFunction ^ func, array < Object ^ > ^ args, Object ^ % lvalue
             }
         }
 
+		// Get the error message from the function.
         auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
+
+        if ( MathcadEfi.FunctionId < 0 || MathcadEfi.FunctionId >= assemblyInfo->Functions->Count )
+            throw gcnew System::Exception( String::Format( "'{0}': function id {1} is out of range", func->Info->Name, MathcadEfi.FunctionId ) );
 
         auto funcobj = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
 
+        if ( funcobj == nullptr ) throw gcnew System::Exception( String::Format( "'{0}': function object is null", func->Info->Name ) );
+
         auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
 
-        if ( errorsFieldInfo != nullptr )
-        {
-            auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
+        if ( errorsFieldInfo == nullptr )
+            throw gcnew System::Exception( String::Format( "'{0}': can't find error table", func->Info->Name ) );
 
-            if ( errors != nullptr ) 
-            {
-                if ( ex->ErrNum > 0 && ex->ErrNum <= errors->GetLength(0) )
-                {
-                    int count = func->Info->ArgTypes->GetLength(0);
+        auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
 
-                    if ( ex->ArgNum < 0 || ex->ArgNum > count ) ex->ArgNum = 0;
+        if ( errors == nullptr )
+            throw gcnew System::Exception( String::Format( "'{0}': error table is null", func->Info->Name ) );
 
-                    // See Mathcad Developer Reference for the details.
-                    return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
-                }
-                else Manager::LogError( "'{0}': can't find error message ({1})", func->Info->Name, ex->ErrNum );
-            }
-            else Manager::LogError( "'{0}': error table is null", func->Info->Name );
-        }
-        else Manager::LogError( "'{0}': can't find error table", func->Info->Name );
+        if ( ex->ErrNum <= 0 || ex->ErrNum > errors->GetLength(0) )
+            throw gcnew System::Exception( String::Format( "'{0}': can't find error message ({1})", func->Info->Name, ex->ErrNum ) );
 
-        return E_FAIL;
-    }
-    catch ( System::Exception ^ ex )
-    {
-        Manager::LogError( "'{0}': {1}", func->Info->Name, ex->Message );
+        int count = func->Info->ArgTypes->GetLength(0);
 
-        return E_FAIL;
+        if ( ex->ArgNum < 0 || ex->ArgNum > count ) ex->ArgNum = 0;
+
+        // See Mathcad Developer Reference for the details.
+        return MAKELRESULT( offset + ex->ErrNum, ex->ArgNum );
     }
 
     return S_OK;
 }
 
 
-LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
+LRESULT ConvertOutput( IComputable ^ func, Object ^ lvalue, void * result )
 {
     // Convert the result.
     Type ^ type = lvalue->GetType();
@@ -166,6 +159,9 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
         auto text = marshal_as< std::string >( ( String ^ ) lvalue );
 
         pmcString->str = ( char * ) MathcadEfi.MathcadAllocate( ( unsigned int ) text.length() + 1u );
+
+        if ( !pmcString->str )
+            throw gcnew System::Exception( String::Format( "'{0}': memory allocation for string failed", func->Info->Name ) );
 
         // std::string to char[].
         strcpy_s( pmcString->str, text.length() + 1u, ( const char * ) text.c_str() );
@@ -187,38 +183,23 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
     {
         auto matrix = ( array<Complex, 2> ^ ) lvalue;
 
-        if ( matrix == nullptr )
-        {
-            Manager::LogError( "'{0}': return value is NULL", func->Info->Name );
-
-            return E_FAIL;
-        }
+        if ( matrix == nullptr ) throw gcnew System::Exception( String::Format( "'{0}': return value is NULL", func->Info->Name ) );
 
         unsigned int rows = matrix->GetLength(0);
         unsigned int cols = matrix->GetLength(1);
 
-        if ( rows == 0 || cols == 0 )
-        {
-            Manager::LogError( "'{0}': wrong return value: [{1}x{2}]", func->Info->Name, rows, cols );
-
-            return E_FAIL;
-        }
+        if ( rows == 0 || cols == 0 ) throw gcnew System::Exception( String::Format( "'{0}': wrong dimension for return value: {1}x{2}", func->Info->Name, rows, cols ) );
 
         bool bImag = false;
 
         // Check if imaginary part is empty.
-        for ( unsigned int row = 0; row < rows; row++ )
+        for each ( Complex c in matrix )
         {
-            for ( unsigned int col = 0; col < cols; col++ )
+            if ( c.Imaginary != 0.0 )
             {
-                if ( matrix[ row, col ].Imaginary != 0.0 )
-                {
-                    bImag = true;
-                    break;
-                }
+                bImag = true;
+                break;
             }
-
-            if ( bImag ) break;
         }
 
         // The first parameter for the MathcadArrayAllocate() function
@@ -240,12 +221,7 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
             }
         }
     }
-    else
-    {
-        Manager::LogError( "'{0}': unknown return type: {1}", func->Info->Name, type->ToString() );
-
-        return E_FAIL;
-    }
+	else throw gcnew System::Exception( String::Format( "'{0}': unknown return type: {1}", func->Info->Name, type->ToString() ) );
 
     return S_OK;
 }
@@ -253,12 +229,19 @@ LRESULT ConvertOutput( IFunction ^ func, Object ^ lvalue, void * result )
 
 // General function.
 LRESULT UserFunction( PVOID items[] )
-{   
+{
     try
     {
+		// Get the assembly and function information.
         auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
 
-        auto func = ( IFunction ^ ) assemblyInfo->Functions[ MathcadEfi.FunctionId ];
+        if ( MathcadEfi.FunctionId < 0 || MathcadEfi.FunctionId >= assemblyInfo->Functions->Count )
+            throw gcnew System::Exception( "FunctionId is out of range" );
+
+		// Get the function object.
+        auto func = ( IComputable ^ ) assemblyInfo->Functions[ MathcadEfi.FunctionId ];
+
+        if ( func == nullptr ) throw gcnew System::Exception( "Function object is null" );
 
         // Get the count of parameters.
         int count = func->Info->ArgTypes->GetLength(0);
@@ -266,24 +249,30 @@ LRESULT UserFunction( PVOID items[] )
         // Create an array of managed function parameters.
         auto args = gcnew array < Object ^ >( count );
 
+		// Get items from the arguments array.
         auto result = ConvertInputs( func, items, args );
 
-        if ( result != S_OK ) return result;
+        if ( result != S_OK ) throw gcnew System::Exception( "Input conversion failed" );
 
         Object ^ lvalue;
 
         result = Evaluate( func, args, lvalue );
 
-        if ( result != S_OK ) return result;
+        if ( result != S_OK ) throw gcnew System::Exception( "Evaluation failed" );
 
         result = ConvertOutput( func, lvalue, items[0] );
 
-        if ( result != S_OK ) return result;
+        if ( result != S_OK ) throw gcnew System::Exception( "Output conversion failed" );
     }
-    catch ( ... )
+    catch ( System::Exception ^ ex )
+    {
+        // Log the error.
+        Manager::LogError( "AssemblyId: {0}, FunctionId: {1}, Exception: {2}", MathcadEfi.AssemblyId, MathcadEfi.FunctionId, ex->Message );
+        return E_FAIL;
+    }
+	catch (...)
     {
         Manager::LogError( "AssemblyId: {0}, FunctionId: {1}", MathcadEfi.AssemblyId, MathcadEfi.FunctionId );
-
         return E_FAIL;
     }
 
@@ -291,6 +280,9 @@ LRESULT UserFunction( PVOID items[] )
 }
 
 
+/// <summary>
+/// Registers the functions in the current AppDomain.
+/// </summary>
 void RegisterFunctions()
 {
     // Prepare managed code. Setup our resolver for assembly loading.
@@ -306,16 +298,19 @@ LRESULT CallbackFunction( void * out, ... )
     return ::UserFunction( & out );
 }
 
-
-BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved ) 
-{   
+// This is the entry point for the DLL.
+BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved )
+{
     if ( dwReason == DLL_PROCESS_ATTACH )
-    { 
+    {
         try
         {
             RegisterFunctions();
         }
-        catch ( ... ) {}
+        catch ( ... )
+        {
+			// TODO: Add unmanaged logging here.
+        }
     }
 
     else if ( dwReason == DLL_PROCESS_DETACH )

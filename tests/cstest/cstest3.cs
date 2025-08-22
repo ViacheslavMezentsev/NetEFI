@@ -1,14 +1,16 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public class cstest3: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class cstest3: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "cstest3", "n, m", "return matrix n, m",
         typeof( Complex[,] ), new[] { typeof( Complex ), typeof( Complex ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         Complex[,] mat = null;
 

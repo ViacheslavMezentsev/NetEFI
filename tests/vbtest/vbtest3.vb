@@ -1,26 +1,27 @@
 ﻿Imports System.Numerics
-Imports NetEFI
+Imports NetEFI.Computables
+Imports NetEFI.Design
 
 Public Class vbtest3
-    Implements IFunction
+    Implements IComputable
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
         Get
-            Return New FunctionInfo( "vbtest3", "n, m", "return matrix n x m", _
-                GetType( Complex(,) ), New Type() { GetType( Complex ), GetType( Complex ) } )
+            Return New FunctionInfo("vbtest3", "n, m", "return matrix n x m",
+                GetType(Complex(,)), New Type() {GetType(Complex), GetType(Complex)})
         End Get
 
     End Property
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
 
         Return Info
 
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
         Dim mat As Complex(,) = Nothing
 
@@ -28,8 +29,8 @@ Public Class vbtest3
 
         Try
 
-            Dim n = CInt( CType( args(0), Complex).Real )
-            Dim m = CInt( CType( args(1), Complex).Real )
+            Dim n = CInt(CType(args(0), Complex).Real)
+            Dim m = CInt(CType(args(1), Complex).Real)
 
             mat = New Complex(n - 1, m - 1) {}
 

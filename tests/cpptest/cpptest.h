@@ -8,9 +8,14 @@ using namespace System::Runtime::InteropServices;
 using namespace System::Globalization;
 using namespace System::Collections::Generic;
 
+
+using namespace NetEFI::Computables;
+using namespace NetEFI::Design;
+using namespace NetEFI::Runtime;
+
 using namespace NetEFI;
 
-public ref class cpptest: public IFunction
+public ref class cpptest: public IComputable
 {
 public:
 
@@ -29,7 +34,7 @@ public:
         return Info;
     }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
     {
         result = "help: info, list";
 
@@ -54,9 +59,9 @@ public:
 
                 for each ( Type^ type in types )
                 {
-                    if ( !type->IsPublic || type->IsAbstract || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+                    if ( !type->IsPublic || type->IsAbstract || !IComputable::typeid->IsAssignableFrom( type ) ) continue;
 
-                    auto f = ( IFunction^ ) Activator::CreateInstance( type );
+                    auto f = ( IComputable^ ) Activator::CreateInstance( type );
                         
                     list->Add( f->Info->Name );
                 }

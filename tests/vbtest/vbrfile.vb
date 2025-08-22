@@ -1,31 +1,32 @@
 ﻿Imports System.IO
-Imports NetEFI
+Imports NetEFI.Computables
+Imports NetEFI.Design
 
 
 Public Class vbrfile
-    Implements IFunction
+    Implements IComputable
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
         Get
-            Return New FunctionInfo("vbrfile", "file", "return file content", _
+            Return New FunctionInfo("vbrfile", "file", "return file content",
                 GetType(String), New Type() {GetType(String)})
         End Get
 
     End Property
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
 
         Return Info
 
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
-        Dim path = CStr( args(0) )
+        Dim path = CStr(args(0))
 
-        result = if( File.Exists( path ), File.ReadAllText( path ), "" )
+        result = If(File.Exists(path), File.ReadAllText(path), "")
 
         Return True
 

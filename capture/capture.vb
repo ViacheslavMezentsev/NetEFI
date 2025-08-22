@@ -2,26 +2,28 @@
 Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Drawing.Imaging
+Imports System.Runtime.InteropServices
 
-Imports NetEFI
+Imports NetEFI.Computables
+Imports NetEFI.Design
 
 Namespace Capture
 
     Public Class capture
-        Implements IFunction
+        Implements IComputable
 
         Public img As Bitmap = Nothing
 
-        Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+        Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
             Get
-                Return New FunctionInfo( "capture", "n", "take a snapshot from the usb webcam", _
-                    GetType(Complex(,)), New Type() {GetType(Complex)} )
+                Return New FunctionInfo("capture", "n", "take a snapshot from the usb webcam",
+                    GetType(Complex(,)), New Type() {GetType(Complex)})
             End Get
 
         End Property
 
-        Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
+        Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
 
             Return Info
 
@@ -47,7 +49,7 @@ Namespace Capture
             Dim rgbValues = New Byte( length - 1 ) {}
 
             ' Copy the RGB values into the array.
-            Runtime.InteropServices.Marshal.Copy( ptr, rgbValues, 0, length )
+            Marshal.Copy(ptr, rgbValues, 0, length)
 
             ' Unlock the bits.
             matimg.UnlockBits(bmpData)
@@ -94,8 +96,8 @@ Namespace Capture
 
         End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+        Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
             Dim mat As Complex(,)
 
@@ -109,11 +111,11 @@ Namespace Capture
 
                 result = mat
 
-                Dim formFormat = New FormCapture( deviceId, Me )
+                Dim formFormat = New FormCapture(deviceId, Me)
 
                 If formFormat.ShowDialog() = DialogResult.OK Then
 
-                    If Not IsNothing( img ) Then result = RGB( img )
+                    If Not IsNothing(img) Then result = RGB(img)
 
                 End If
 

@@ -1,13 +1,15 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public class csenc: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class csenc: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "csenc", "m", "encoder", typeof( Complex[,] ), new[] { typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         var matrix = ( Complex[,] ) args[0];
 

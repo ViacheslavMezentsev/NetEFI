@@ -1,12 +1,6 @@
 #pragma once
 
-using namespace System;
-using namespace System::Numerics;
-using namespace System::Text;
-
-using namespace NetEFI;
-
-public ref class cpperror: public IFunction
+public ref class cpperror: public IComputable
 {
 public:
 
@@ -29,7 +23,7 @@ public:
 
     virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
     {
         throw gcnew EFIException( ( int ) ( ( Complex ) args[0] ).Real, 1 );
     }

@@ -3,25 +3,25 @@
 
 namespace NetEFI
 {
-    public ref class netefi : public IFunction
+    public ref class netefi : public IComputable
     {
     public:
 
         virtual property FunctionInfo ^ Info
         {
-            FunctionInfo ^ get()
+            FunctionInfo^ get()
             {
                 return gcnew FunctionInfo( Manager::ExecAssembly->GetName()->Name, "cmd", "return string",
                     String::typeid, gcnew array<Type ^> { String::typeid } );
             }
         }
 
-        virtual FunctionInfo ^ GetFunctionInfo( String ^ lang )
+        virtual FunctionInfo^ GetFunctionInfo( String ^ lang )
         {
             return Info;
         }
 
-        virtual bool NumericEvaluation( array< Object ^ > ^ args, [ Out ] Object ^% result, Context ^% context )
+        virtual bool NumericEvaluation( array< Object ^ > ^ args, [ Out ] Object ^% result, Context ^ context )
         {
             result = "help: info, os, net, author, email, list";
 

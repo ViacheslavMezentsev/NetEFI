@@ -1,7 +1,10 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public partial class cserror: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+using NetEFI.Runtime;
+
+public partial class cserror: IComputable
 {
     public static string[] Errors =
     {
@@ -15,7 +18,7 @@ public partial class cserror: IFunction
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         throw new EFIException( ( int ) ( ( Complex ) args[0] ).Real, 1 );
     }

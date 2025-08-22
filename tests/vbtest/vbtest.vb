@@ -1,27 +1,29 @@
 ﻿Imports System.Linq
 Imports System.Reflection
-Imports NetEFI
+
+Imports NetEFI.Computables
+Imports NetEFI.Design
 
 Public Class vbtest
-    Implements IFunction
+    Implements IComputable
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
         Get
-            Return New FunctionInfo( "vbtest", "cmd", "return info", _
+            Return New FunctionInfo("vbtest", "cmd", "return info",
                 GetType(String), New Type() {GetType(String)})
         End Get
 
     End Property
 
-    Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
 
         Return Info
 
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
         result = "help: info, list"
 
@@ -39,11 +41,11 @@ Public Class vbtest
 
             ElseIf cmd = "list" Then
 
-                Dim types = assembl.GetTypes().Where( Function(t) t.IsPublic AndAlso Not t.IsAbstract AndAlso GetType( IFunction ).IsAssignableFrom(t) )
+                Dim types = assembl.GetTypes().Where(Function(t) t.IsPublic AndAlso Not t.IsAbstract AndAlso GetType(IComputable).IsAssignableFrom(t))
 
-                Dim names = types.Select( Function(t) DirectCast( Activator.CreateInstance(t), IFunction ).Info.Name ).ToArray()
+                Dim names = types.Select(Function(t) DirectCast(Activator.CreateInstance(t), IComputable).Info.Name).ToArray()
 
-                result = String.Join( ", ", names )
+                result = String.Join(", ", names)
 
             End If
 

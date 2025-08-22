@@ -1,12 +1,6 @@
 #pragma once
 
-using namespace System;
-using namespace System::Numerics;
-using namespace System::Text;
-
-using namespace NetEFI;
-
-public ref class cppsum: public IFunction
+public ref class cppsum: public IComputable
 {
 public:
 
@@ -21,7 +15,7 @@ public:
 
     virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
 
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ % context )
+    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
     {
         result = ( Complex ) args[0] + ( Complex ) args[1];
 

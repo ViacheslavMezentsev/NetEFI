@@ -8,7 +8,7 @@
 [assembly:AssemblyConfiguration("")];
 [assembly:AssemblyCompany("Viacheslav N. Mezentsev (viacheslavmezentsev@ya.ru)")];
 [assembly:AssemblyProduct(".Net Mathcad Extension")];
-[assembly:AssemblyCopyright("Copyright (c) Viacheslav N. Mezentsev, 2014-2021")];
+[assembly:AssemblyCopyright("Copyright (c) Viacheslav N. Mezentsev, 2014-2025")];
 [assembly:AssemblyTrademark("")];
 [assembly:AssemblyCulture("")];
 
@@ -21,6 +21,6 @@
 //
 // You can specify all the value or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
-[assembly:AssemblyVersion("0.2.*")];
+[assembly:AssemblyVersion("0.3.*")];
 [assembly:ComVisible(false)];
 [assembly:CLSCompliant(true)];

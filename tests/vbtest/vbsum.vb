@@ -1,11 +1,12 @@
 ﻿Imports System.Numerics
-Imports NetEFI
+Imports NetEFI.Computables
+Imports NetEFI.Design
 
 
 Public Class vbsum
-    Implements IFunction
+    Implements IComputable
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IFunction.Info
+    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
 
         Get
             Return New FunctionInfo("vbsum", "a,b", "complex sum of scalars a and b",
@@ -14,19 +15,19 @@ Public Class vbsum
         End Get
     End Property
 
-    Public Function GetFunctionInfo( lang As String ) As FunctionInfo Implements IFunction.GetFunctionInfo
+    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
         Return Info
     End Function
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, ByRef context As Context) As Boolean _
-        Implements IFunction.NumericEvaluation
+    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
+        Implements IComputable.NumericEvaluation
 
-        result = Evaluate( args(0), args(1) )
+        result = Evaluate(args(0), args(1))
 
         Return True
     End Function
 
-    Public Function Evaluate( a As Complex, b As Complex ) As Complex
+    Public Function Evaluate(a As Complex, b As Complex) As Complex
 
         Return a + b
 

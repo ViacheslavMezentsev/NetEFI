@@ -1,14 +1,16 @@
 ﻿using System.Numerics;
-using NetEFI;
 
-public class cstranspose: IFunction
+using NetEFI.Computables;
+using NetEFI.Design;
+
+public class cstranspose: IComputable
 {
     public FunctionInfo Info => new FunctionInfo( "cstranspose", "X", "returns a transpose of X",
         typeof( Complex[,] ), new[] { typeof( Complex[,] ) } );
 
     public FunctionInfo GetFunctionInfo( string lang ) => Info;
 
-    public bool NumericEvaluation( object[] args, out object result, ref Context context )
+    public bool NumericEvaluation( object[] args, out object result, Context context )
     {
         result = Evaluate( ( Complex[,] ) args[0] );
 

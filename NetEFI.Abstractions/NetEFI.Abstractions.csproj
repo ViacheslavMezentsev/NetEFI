@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\Version.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>NetEFI</RootNamespace>
+    <AssemblyName>NetEFI.Abstractions</AssemblyName>   
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyTitle>NetEFI.Abstractions</AssemblyTitle>
+    <Description>Provides the public API and contracts for the NetEFI Framework.</Description>
+    
+    <CLSCompliant>true</CLSCompliant>
+    <Guid>85220e1e-e987-4525-9ef9-f22528be6413</Guid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+
+</Project>

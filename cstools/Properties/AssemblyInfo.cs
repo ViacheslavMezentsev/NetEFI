@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration( "" )]
 [assembly: AssemblyCompany( "" )]
 [assembly: AssemblyProduct( "cstools" )]
-[assembly: AssemblyCopyright( "Copyright © Viacheslav N. Mezentsev 2021" )]
+[assembly: AssemblyCopyright( "Copyright © Viacheslav N. Mezentsev 2021-2025" )]
 [assembly: AssemblyTrademark( "" )]
 [assembly: AssemblyCulture( "" )]
 

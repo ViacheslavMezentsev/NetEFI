@@ -227,7 +227,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 }
 
 
-PVOID Manager::CreateUserFunction( FunctionInfo ^ info, PVOID p )
+PVOID Manager::CreateUserFunction( NetEFI::Design::FunctionInfo^ info, PVOID p )
 {
     FUNCTIONINFO fi {};
 
@@ -354,7 +354,7 @@ bool Manager::RegisterFunctions()
 
                 auto funcobj = assemblyInfo->Functions[n];
 
-                auto info = ( ( IFunction ^ ) funcobj )->GetFunctionInfo( lang );
+                auto info = ( ( IComputable ^ ) funcobj )->GetFunctionInfo( lang );
 
                 if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
@@ -433,9 +433,16 @@ bool Manager::LoadAssemblies()
                 // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
                 for each ( Type ^ type in assembly->GetTypes() )
                 {
-                    if ( !type->IsPublic || !type->IsClass || !IFunction::typeid->IsAssignableFrom( type ) ) continue;
+                    if ( !type->IsPublic || !type->IsClass || !IComputable::typeid->IsAssignableFrom( type ) ) continue;
 
-                    assemblyInfo->Functions->Add( Activator::CreateInstance( type ) );
+                    // Создаем экземпляр.
+                    Object^ instance = Activator::CreateInstance( type );
+
+                    // Безопасно приводим его к нужному интерфейсному типу.
+                    IComputable^ computableInstance = safe_cast<IComputable^>(instance);
+
+                    // Добавляем в строго типизированный список.
+                    assemblyInfo->Functions->Add( computableInstance ); 
                 }
 
                 if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
@@ -455,12 +462,7 @@ bool Manager::LoadAssemblies()
         MathcadEfi.DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
         // TODO: Handle errors.
-        if ( MathcadEfi.DynamicCode == nullptr )
-        {
-            LogError( "Dynamic memory allocation failed." );
-
-            return false;
-        }
+        if ( MathcadEfi.DynamicCode == nullptr ) throw gcnew System::Exception( "Dynamic memory allocation failed" );
     }
     catch ( System::Exception ^ ex )
     {
