@@ -1,80 +1,54 @@
 ﻿using System.Numerics;
 using System.Collections.Generic;
-
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstable: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstable", "x", "return table of frequenses n x m",
-        typeof( Complex[,] ), new[] { typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    uint x = 1, y, z, w;
-
-    // A faster Marsaglia's Xorshift pseudo-random generator in unsafe C#
-    // http://roman.st/Article/Faster-Marsaglia-Xorshift-pseudo-random-generator-in-unsafe-C
-    byte NextByte()
+    [Computable( "cstable", "seed", "Generates a frequency table of pseudo-random numbers." )]
+    public class CsTable: MathcadFunction<Complex, Complex[,]>
     {
-        uint t = x ^ ( x << 11 );
+        // State for the PRNG
+        private uint x = 1, y, z, w;
 
-        x = y; y = z; z = w;
-        w = w ^ ( w >> 19 ) ^ ( t ^ ( t >> 8 ) );
-
-        return ( byte ) ( w & 0xFF );
-    }
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
-    {
-        x = 1;
-        y = 0;
-        z = 0;
-        w = 0;
-
-        var nums = new byte[ 256 * 256 + 8 ];
-
-        int k;
-
-        for ( k = 0; k < 256 * 256 + 8; k++ ) nums[k] = NextByte();
-
-        var list = new List<List<int>>();
-
-        for ( k = 0; k < 256 * 256; k++ )
+        // A fast Marsaglia's Xorshift pseudo-random number generator.
+        private byte NextByte()
         {
-            list.Add( new List<int>() );
+            uint t = x ^ ( x << 11 );
+            x = y; y = z; z = w;
+            w = w ^ ( w >> 19 ) ^ ( t ^ ( t >> 8 ) );
+            return ( byte ) ( w & 0xFF );
         }
 
-        for ( k = 0; k < 256 * 256; k++ )
+        public override Complex[,] Execute( Complex seed, Context context )
         {
-            var classid = nums[k + 0] >> 6;
+            // Use the input as a seed for the PRNG
+            x = ( uint ) seed.Real;
+            y = ( uint ) seed.Imaginary;
+            z = x | ( y << 16 );
+            w = y | ( x << 16 );
 
-            classid += ( nums[k + 1] >> 6 ) << 2;
+            const int dataSize = 256 * 256;
+            const int numClasses = 256 * 256;
 
-            classid += ( nums[k + 2] >> 6 ) << 4;
+            // Generate frequency counts
+            var counts = new int[ numClasses ];
+            for ( int k = 0; k < dataSize; k++ )
+            {
+                // Generate a 16-bit random number
+                var classId = ( NextByte() << 8 ) | NextByte();
+                counts[ classId ]++;
+            }
 
-            classid += ( nums[k + 3] >> 6 ) << 6;
+            // Prepare the result matrix
+            var res = new Complex[ numClasses, 1 ];
+            for ( int k = 0; k < numClasses; k++ )
+            {
+                res[ k, 0 ] = new Complex( counts[ k ], 0 );
+            }
 
-            classid += ( nums[k + 4] >> 6 ) << 8;
-
-            classid += ( nums[k + 5] >> 6 ) << 10;
-
-            classid += ( nums[k + 6] >> 6 ) << 12;
-
-            classid += ( nums[k + 7] >> 6 ) << 14;
-
-            list[ classid ].Add( k );
+            return res;
         }
-
-        var res = new Complex[ 256 * 256, 1 ];
-
-        for ( k = 0; k < 256 * 256; k++ )
-        {
-            res[ k, 0 ] = new Complex( list[k].Count, 0 );
-        }
-
-        result = res;
-
-        return true;
     }
 }

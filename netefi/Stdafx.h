@@ -9,7 +9,6 @@
 
 #include <vector>
 #include <string>
-#include <cassert>
 #include <fstream>
 #include <windows.h>
 #include <ShlObj.h>
@@ -23,6 +22,7 @@
 using namespace System;
 using namespace System::Numerics;
 using namespace System::IO;
+using namespace System::Xml::Linq;
 using namespace System::Text;
 using namespace System::Linq;
 using namespace System::Reflection;
@@ -33,7 +33,9 @@ using namespace System::Collections::Generic;
 
 using namespace NetEFI::Computables;
 using namespace NetEFI::Design;
+using namespace NetEFI::Functions;
 using namespace NetEFI::Runtime;
+
 
 using namespace msclr::interop;
 

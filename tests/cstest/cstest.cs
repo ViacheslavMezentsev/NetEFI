@@ -1,49 +1,46 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-
+using System.Collections.Generic;
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstest: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstest", "cmd", "return info",
-        typeof( string ), new[] { typeof( string ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cstest", "cmd", "A utility function to inspect the C# test assembly." )]
+    public class CsTest: MathcadFunction<string, string>
     {
-        result = "help: info, list";
-
-        var assembly = Assembly.GetExecutingAssembly();
-
-        try
+        public override string Execute( string cmd, Context context )
         {
-            var cmd = ( string ) args[0];
+            var assembly = this.GetType().Assembly;
 
-            if ( cmd == "info" )
+            try
             {
-                var name = assembly.GetName();
+                if ( cmd.Equals( "info", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    var name = assembly.GetName();
+                    return $"{name.Name}: {name.Version}";
+                }
 
-                result = $"{name.Name}: {name.Version}";
+                if ( cmd.Equals( "list", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    var functionTypes = assembly.GetTypes().Where( t =>
+                        t.IsPublic && !t.IsAbstract && typeof( MathcadFunctionBase ).IsAssignableFrom( t ) );
+
+                    var names = functionTypes
+                        .Select( t => t.GetCustomAttribute<ComputableAttribute>( false )?.Name )
+                        .Where( n => n != null );
+
+                    return string.Join( ", ", names );
+                }
+            }
+            catch ( Exception ex )
+            {
+                return $"ERROR: {ex.Message}";
             }
 
-            else if ( cmd == "list" )
-            {
-                var types = assembly.GetTypes().Where( t => t.IsPublic && !t.IsAbstract && typeof( IComputable ).IsAssignableFrom(t) );
-
-                var names = types.Select( t => ( ( IComputable ) Activator.CreateInstance(t) ).Info.Name ).ToArray();
-
-                result = string.Join( ", ", names );
-            }
+            return "help: info, list";
         }
-        catch
-        {
-            result = null;
-            return false;
-        }
-
-        return true;
     }
 }

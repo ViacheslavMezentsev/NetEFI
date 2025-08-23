@@ -1,63 +1,45 @@
 ﻿Imports System.Linq
 Imports System.Reflection
-
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
-Public Class vbtest
-    Implements IComputable
+Namespace VbTest
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+    <Computable("vbtest", "cmd", "A utility function to inspect the VB.NET test assembly.")>
+    Public Class VbTest
+        Inherits MathcadFunction(Of String, String)
 
-        Get
-            Return New FunctionInfo("vbtest", "cmd", "return info",
-                GetType(String), New Type() {GetType(String)})
-        End Get
+        Public Overrides Function Execute(cmd As String, context As Context) As String
+            Dim currentAssembly = Me.GetType().Assembly
 
-    End Property
+            Try
+                If cmd.Equals("info", StringComparison.OrdinalIgnoreCase) Then
+                    Dim assemblyName = currentAssembly.GetName()
+                    Return $"{assemblyName.Name}: {assemblyName.Version}"
+                End If
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
+                If cmd.Equals("list", StringComparison.OrdinalIgnoreCase) Then
+                    ' Find all function types in this assembly
+                    Dim functionTypes = currentAssembly.GetTypes().Where(
+                        Function(t) t.IsPublic AndAlso Not t.IsAbstract AndAlso GetType(MathcadFunctionBase).IsAssignableFrom(t))
 
-        Return Info
+                    ' Get the function names from their attributes
+                    Dim names = functionTypes.Select(
+                        Function(t) t.GetCustomAttribute(Of ComputableAttribute)(False)?.Name).Where(
+                        Function(n) n IsNot Nothing)
 
-    End Function
+                    Return String.Join(", ", names)
+                End If
 
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
+            Catch ex As Exception
+                context.LogError($"vbtest failed: {ex.Message}")
+                Return $"ERROR: {ex.Message}"
+            End Try
 
-        result = "help: info, list"
+            Return "help: info, list"
+        End Function
 
-        Dim assembl = Assembly.GetExecutingAssembly()
+    End Class
 
-        Try
-
-            Dim cmd = CType(args(0), String)
-
-            If cmd = "info" Then
-
-                Dim name = assembl.GetName()
-
-                result = $"{name.Name}: {name.Version}"
-
-            ElseIf cmd = "list" Then
-
-                Dim types = assembl.GetTypes().Where(Function(t) t.IsPublic AndAlso Not t.IsAbstract AndAlso GetType(IComputable).IsAssignableFrom(t))
-
-                Dim names = types.Select(Function(t) DirectCast(Activator.CreateInstance(t), IComputable).Info.Name).ToArray()
-
-                result = String.Join(", ", names)
-
-            End If
-
-        Catch ex As Exception
-
-            result = Nothing
-            Return False
-
-        End Try
-
-        Return True
-
-    End Function
-
-End Class
+End Namespace

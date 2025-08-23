@@ -2,18 +2,16 @@
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstest1: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstest1", "x", "return complex scalar 2 * x",
-        typeof( Complex ), new[] { typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cstest1", "x", "Returns the complex scalar 2 * x." )]
+    public class CsTest1: MathcadFunction<Complex, Complex>
     {
-        result = 2 * ( Complex ) args[0];
-
-        return true;
+        public override Complex Execute( Complex x, Context context )
+        {
+            return 2 * x;
+        }
     }
 }

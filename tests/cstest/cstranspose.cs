@@ -2,34 +2,28 @@
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstranspose: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstranspose", "X", "returns a transpose of X",
-        typeof( Complex[,] ), new[] { typeof( Complex[,] ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cstranspose", "X", "Returns the transpose of matrix X." )]
+    public class CsTranspose: MathcadFunction<Complex[,], Complex[,]>
     {
-        result = Evaluate( ( Complex[,] ) args[0] );
+        public override Complex[,] Execute( Complex[,] X, Context context )
+        {
+            var rows = X.GetLength( 0 );
+            var cols = X.GetLength( 1 );
 
-        return true;
-    }
+            var Y = new Complex[ cols, rows ];
 
-    public Complex[,] Evaluate( Complex[,] X )
-    {
-        var rows = X.GetLength(0);
-        var cols = X.GetLength(1);
-
-        var Y = new Complex[ cols, rows ];
-
-        for ( var r = 0; r < rows; r++ )
-            for ( var c = 0; c < cols; c++ )
+            for ( var r = 0; r < rows; r++ )
             {
-                Y[ c, r ] = X[ r, c ];
+                for ( var c = 0; c < cols; c++ )
+                {
+                    Y[ c, r ] = X[ r, c ];
+                }
             }
-
-        return Y;
+            return Y;
+        }
     }
 }

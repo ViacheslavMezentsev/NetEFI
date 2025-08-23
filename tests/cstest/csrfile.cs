@@ -1,22 +1,30 @@
 ﻿using System.IO;
-
+using System;
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class csrfile: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "csrfile", "file", "return file content", typeof( string ), new[] { typeof( string ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) { return Info; }
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "csrfile", "filePath", "Returns the content of a specified text file." )]
+    public class CsReadFile: MathcadFunction<string, string>
     {
-        result = "";
-
-        var path = ( string ) args[0];
-
-        if ( File.Exists( path ) ) result = File.ReadAllText( path );
-
-        return true;
+        public override string Execute( string filePath, Context context )
+        {
+            try
+            {
+                if ( File.Exists( filePath ) )
+                {
+                    return File.ReadAllText( filePath );
+                }
+                // Return a clear error message if the file doesn't exist.
+                return $"ERROR: File not found at '{filePath}'";
+            }
+            catch ( Exception ex )
+            {
+                context.LogError( $"Failed to read file '{filePath}': {ex.Message}" );
+                return $"ERROR: {ex.Message}";
+            }
+        }
     }
 }

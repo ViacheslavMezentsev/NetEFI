@@ -2,18 +2,16 @@
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cssum: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cssum", "a,b", "complex sum of scalars a and b",
-                typeof( Complex ), new[] { typeof( Complex ), typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cssum", "a, b", "Calculates the complex sum of two scalars." )]
+    public class CsSum: MathcadFunction<Complex, Complex, Complex>
     {
-        result = ( Complex ) args[0] + ( Complex ) args[1];
-
-        return true;
+        public override Complex Execute( Complex a, Complex b, Context context )
+        {
+            return a + b;
+        }
     }
 }

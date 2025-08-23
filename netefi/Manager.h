@@ -27,15 +27,16 @@ namespace NetEFI
 {
     public ref class Manager
     {
-    private:
+    private:        
         static void Log( String ^ );
         static void Log( String ^, ... array<Object ^> ^ );
         static bool IsManagedAssembly( String ^ );        
-        static PVOID CreateUserFunction( NetEFI::Design::FunctionInfo ^, PVOID );
+        static PVOID CreateUserFunction( FunctionInfo ^, PVOID );
         static void CreateUserErrorMessageTable( array < String ^ > ^ );
         static void InjectCode( PBYTE &, int, int );
 
     public:
+        static HashSet<Type^>^ SupportedTypes;
 
         static List < AssemblyInfo ^ > ^ Assemblies;
 

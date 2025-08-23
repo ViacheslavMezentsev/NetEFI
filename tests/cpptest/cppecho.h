@@ -1,30 +1,21 @@
 #pragma once
 
-using namespace System;
-using namespace System::Text;
+#include "stdafx.h" // Ensure stdafx.h is included
 
-public ref class cppecho : public IComputable
+// Import the new NetEFI namespaces
+using namespace NetEFI::Computables;
+using namespace NetEFI::Design;
+using namespace NetEFI::Functions;
+
+namespace cpptest
 {
-public:
-
-    virtual property FunctionInfo^ Info
+    [Computable( "cppecho", "s", "Returns the input string." )]
+    public ref class CppEcho : public MathcadFunction<String^, String^>
     {
-        FunctionInfo^ get()
-        {             
-            return gcnew FunctionInfo( "cppecho", "s", "return string",
-                String::typeid, gcnew array<Type^> { String::typeid } );
+    public:
+        virtual String^ Execute( String^ s, Context^ context ) override
+        {
+            return s;
         }
-    }
-
-    virtual FunctionInfo^ GetFunctionInfo( String^ lang )
-    { 
-        return Info;
-    }
-
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
-    {
-        result = args[0];
-
-        return true;
-    }
-};
+    };
+}

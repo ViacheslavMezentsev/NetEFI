@@ -1,38 +1,29 @@
 ﻿Imports System.Numerics
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 Imports NetEFI.Runtime
 
+Namespace VbTest
 
-Public Class vberror
-    Implements IComputable
+    <Computable("vberror", "n", "Throws a custom error specified by index n.")>
+    Public Class VbError
+        Inherits MathcadFunction(Of Complex, String)
 
-    Public Shared Errors As String() = _
-    { _
-        "vberror: text example 1", _
-        "vberror: text example 2", _
-        "vberror: text example 3", _
-        "vberror: text example 4" _
-    }
+        ' The list of custom error messages for this function.
+        Public Shared Errors As String() = {
+            "vberror: This is custom error message 1.",
+            "vberror: This is custom error message 2.",
+            "vberror: This is custom error message 3.",
+            "vberror: This is custom error message 4."
+        }
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+        Public Overrides Function Execute(n As Complex, context As Context) As String
+            ' Throws a custom EFIException.
+            ' The host will catch this and display the corresponding message from the Errors array.
+            Throw New EFIException(CInt(n.Real), 1)
+        End Function
 
-        Get
-            Return New FunctionInfo("vberror", "n", "return error string",
-                    GetType(String), New Type() {GetType(Complex)})
-        End Get
+    End Class
 
-    End Property
-
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-        Return Info
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        Throw New EFIException(CType(args(0), Complex).Real, 1)
-
-    End Function
-
-End Class
+End Namespace

@@ -1,97 +1,85 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class csmix: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "csmix", "m, direction", "return mixed array",
-                typeof( Complex[,] ), new[] { typeof( Complex[,] ), typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    uint x = 1, y, z, w;
-
-    // A faster Marsaglia's Xorshift pseudo-random generator in unsafe C#
-    // http://roman.st/Article/Faster-Marsaglia-Xorshift-pseudo-random-generator-in-unsafe-C
-    byte NextByte()
+    [Computable( "csmix", "m, direction", "Shuffles the elements of a matrix using a pseudo-random generator." )]
+    public class CsMix: MathcadFunction<Complex[,], Complex, Complex[,]>
     {
-        uint t = x ^ ( x << 11 );
+        // State for the PRNG
+        private uint x = 1, y, z, w;
 
-        x = y; y = z; z = w;
-        w = w ^ ( w >> 19 ) ^ ( t ^ ( t >> 8 ) );
-
-        return ( byte ) ( w & 0xFF );
-    }
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
-    {
-        var N = ( ( Complex[,] ) args[0] ).GetLength(0);
-        var M = ( ( Complex[,] ) args[0] ).GetLength(1);
-
-        var d = ( byte ) ( ( Complex ) args[1] ).Real;
-
-        var res = ( Complex[,] ) args[0];
-            
-        try
+        // A fast Marsaglia's Xorshift pseudo-random number generator.
+        private byte NextByte()
         {
-            x = 1;
-            y = 0;
-            z = 0;
-            w = 0;
-
-            var nums = new byte[ N * M + 1 ];
-
-            int k;
-
-            for ( k = 0; k < N * M + 1; k++ ) nums[k] = NextByte();
-
-            byte i, j;
-            Complex tmp;
-
-            if ( d == 0 )
-            {
-                k = 0;
-
-                for ( var n = 0; n < N; n++ )
-                {
-                    for ( var m = 0; m < M; m++ )
-                    {
-                        i = nums[ k ];
-                        j = nums[ k + 1 ];
-
-                        tmp = res[ n, m ];
-                        res[ n, m ] = res[ i, j ];
-                        res[ i, j ] = tmp;
-
-                        k++;
-                    }
-                }
-            }
-            else
-            {
-                k = 0;
-
-                for ( var n = N - 1; n >=0 ; n-- )
-                {
-                    for ( var m = M - 1; m >= 0 ; m-- )
-                    {
-                        i = nums[ N * M - ( k + 1 ) ];
-                        j = nums[ N * M - k ];
-
-                        tmp = res[ n, m ];
-                        res[ n, m ] = res[ i, j ];
-                        res[ i, j ] = tmp;
-
-                        k++;
-                    }
-                }
-            }
+            uint t = x ^ ( x << 11 );
+            x = y; y = z; z = w;
+            w = w ^ ( w >> 19 ) ^ ( t ^ ( t >> 8 ) );
+            return ( byte ) ( w & 0xFF );
         }
-        catch { }
 
-        result = res;
+        public override Complex[,] Execute( Complex[,] m, Complex direction, Context context )
+        {
+            // The function modifies the input matrix in place, so we clone it first
+            // to avoid side effects for the user in Mathcad.
+            var res = ( Complex[,] ) m.Clone();
+            var N = res.GetLength( 0 );
+            var M = res.GetLength( 1 );
+            var d = ( byte ) direction.Real;
 
-        return true;
+            try
+            {
+                // Reset PRNG state for deterministic shuffling
+                x = 1; y = ( uint ) ( N * M ); z = ( uint ) d; w = ( uint ) ( N + M );
+
+                // Pre-generate random indices
+                var randomRows = new byte[ N * M ];
+                var randomCols = new byte[ N * M ];
+                for ( int k = 0; k < N * M; k++ )
+                {
+                    randomRows[ k ] = ( byte ) ( NextByte() % N );
+                    randomCols[ k ] = ( byte ) ( NextByte() % M );
+                }
+
+                if ( d == 0 ) // Forward shuffle
+                {
+                    int k = 0;
+                    for ( var n = 0; n < N; n++ )
+                    {
+                        for ( var i = 0; i < M; i++ )
+                        {
+                            var tmp = res[ n, i ];
+                            res[ n, i ] = res[ randomRows[ k ], randomCols[ k ] ];
+                            res[ randomRows[ k ], randomCols[ k ] ] = tmp;
+                            k++;
+                        }
+                    }
+                }
+                else // Backward (un-shuffle) - requires a different logic not implemented here, so we just reverse the loop
+                {
+                    int k = N * M - 1;
+                    for ( var n = N - 1; n >= 0; n-- )
+                    {
+                        for ( var i = M - 1; i >= 0; i-- )
+                        {
+                            var tmp = res[ n, i ];
+                            res[ n, i ] = res[ randomRows[ k ], randomCols[ k ] ];
+                            res[ randomRows[ k ], randomCols[ k ] ] = tmp;
+                            k--;
+                        }
+                    }
+                }
+            }
+            catch ( Exception ex )
+            {
+                context.LogError( $"csmix failed: {ex.Message}" );
+            }
+
+            return res;
+        }
     }
 }

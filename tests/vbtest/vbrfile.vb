@@ -1,35 +1,27 @@
 ﻿Imports System.IO
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
+Namespace VbTest
 
-Public Class vbrfile
-    Implements IComputable
+    <Computable("vbrfile", "filePath", "Returns the content of a specified text file.")>
+    Public Class VbReadFile
+        Inherits MathcadFunction(Of String, String)
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+        Public Overrides Function Execute(filePath As String, context As Context) As String
+            Try
+                If File.Exists(filePath) Then
+                    Return File.ReadAllText(filePath)
+                Else
+                    Return $"ERROR: File not found at '{filePath}'"
+                End If
+            Catch ex As Exception
+                context.LogError($"Failed to read file '{filePath}': {ex.Message}")
+                Return $"ERROR: {ex.Message}"
+            End Try
+        End Function
 
-        Get
-            Return New FunctionInfo("vbrfile", "file", "return file content",
-                GetType(String), New Type() {GetType(String)})
-        End Get
+    End Class
 
-    End Property
-
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-
-        Return Info
-
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        Dim path = CStr(args(0))
-
-        result = If(File.Exists(path), File.ReadAllText(path), "")
-
-        Return True
-
-    End Function
-
-End Class
+End Namespace

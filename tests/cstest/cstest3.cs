@@ -2,38 +2,32 @@
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstest3: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstest3", "n, m", "return matrix n, m",
-        typeof( Complex[,] ), new[] { typeof( Complex ), typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cstest3", "n, m", "Returns an n x m matrix of complex numbers." )]
+    public class CsTest3: MathcadFunction<Complex, Complex, Complex[,]>
     {
-        Complex[,] mat = null;
-
-        result = mat;
-
-        try
+        public override Complex[,] Execute( Complex nComplex, Complex mComplex, Context context )
         {
-            var n = ( int ) ( ( Complex ) args[0] ).Real;
-            var m = ( int ) ( ( Complex ) args[1] ).Real;
+            var n = ( int ) nComplex.Real;
+            var m = ( int ) mComplex.Real;
 
-            mat = new Complex[n, m];
+            if ( n <= 0 || m <= 0 )
+            {
+                return new Complex[ 0, 0 ]; // Return empty matrix for invalid dimensions
+            }
 
+            var matrix = new Complex[ n, m ];
             for ( var r = 0; r < n; r++ )
+            {
                 for ( var c = 0; c < m; c++ )
-                    mat[r, c] = new Complex( r, c );
-
-            result = mat;
+                {
+                    matrix[ r, c ] = new Complex( r, c );
+                }
+            }
+            return matrix;
         }
-        catch
-        {
-            return false;
-        }
-
-        return true;
     }
 }

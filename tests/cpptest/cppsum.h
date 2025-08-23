@@ -1,24 +1,21 @@
 #pragma once
 
-public ref class cppsum: public IComputable
+#include "stdafx.h"
+
+using namespace System::Numerics;
+using namespace NetEFI::Computables;
+using namespace NetEFI::Design;
+using namespace NetEFI::Functions;
+
+namespace cpptest
 {
-public:
-
-    virtual property FunctionInfo^ Info
+    [Computable( "cppsum", "a, b", "Calculates the complex sum of two scalars." )]
+    public ref class CppSum : public MathcadFunction<Complex, Complex, Complex>
     {
-        FunctionInfo^ get()
-        { 
-            return gcnew FunctionInfo( "cppsum", "a,b", "complex sum of scalars a and b",
-                Complex::typeid, gcnew array<Type^> {  Complex::typeid,  Complex::typeid } );
+    public:
+        virtual Complex Execute( Complex a, Complex b, Context^ context ) override
+        {
+            return a + b;
         }
-    }
-
-    virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
-
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
-    {
-        result = ( Complex ) args[0] + ( Complex ) args[1];
-
-        return true;
-    }
-};
+    };
+}

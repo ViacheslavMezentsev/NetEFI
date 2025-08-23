@@ -2,24 +2,26 @@
 
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 using NetEFI.Runtime;
 
-public partial class cserror: IComputable
+namespace cstest
 {
-    public static string[] Errors =
+    [Computable( "cserror", "n", "Throws a custom error specified by index n." )]
+    public class CsError: MathcadFunction<Complex, string>
     {
-        "cserror: text example 1",
-        "cserror: text example 2",
-        "cserror: text example 3",
-        "cserror: text example 4"
-    };
+        public static string[] Errors =
+        {
+            "cserror: This is custom error message 1.",
+            "cserror: This is custom error message 2.",
+            "cserror: This is custom error message 3.",
+            "cserror: This is custom error message 4."
+        };
 
-    public FunctionInfo Info => new FunctionInfo( "cserror", "n", "return error string", typeof( string ), new[] { typeof( Complex ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
-    {
-        throw new EFIException( ( int ) ( ( Complex ) args[0] ).Real, 1 );
+        public override string Execute( Complex n, Context context )
+        {
+            // Throws a custom EFIException.
+            throw new EFIException( ( int ) n.Real, 1 );
+        }
     }
 }

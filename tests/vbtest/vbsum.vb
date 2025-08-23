@@ -1,36 +1,18 @@
 ﻿Imports System.Numerics
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
+Namespace VbTest
 
-Public Class vbsum
-    Implements IComputable
+    <Computable("vbsum", "a, b", "Calculates the complex sum of two scalars a and b.")>
+    Public Class VbSum
+        Inherits MathcadFunction(Of Complex, Complex, Complex)
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+        Public Overrides Function Execute(a As Complex, b As Complex, context As Context) As Complex
+            Return a + b
+        End Function
 
-        Get
-            Return New FunctionInfo("vbsum", "a,b", "complex sum of scalars a and b",
-                    GetType(Complex),
-                    New Type() {GetType(Complex), GetType(Complex)})
-        End Get
-    End Property
+    End Class
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-        Return Info
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        result = Evaluate(args(0), args(1))
-
-        Return True
-    End Function
-
-    Public Function Evaluate(a As Complex, b As Complex) As Complex
-
-        Return a + b
-
-    End Function
-
-End Class
+End Namespace

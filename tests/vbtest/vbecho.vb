@@ -1,32 +1,18 @@
-﻿Imports NetEFI.Computables
+﻿Imports System.Numerics
+Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
+Namespace VbTest
 
-Public Class vbecho
-    Implements IComputable
+    <Computable("vbecho", "s", "Returns the input string.")>
+    Public Class VbEcho
+        Inherits MathcadFunction(Of String, String)
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+        Public Overrides Function Execute(s As String, context As Context) As String
+            Return s
+        End Function
 
-        Get
-            Return New FunctionInfo("vbecho", "s", "return string",
-                GetType(String), New Type() {GetType(String)})
-        End Get
+    End Class
 
-    End Property
-
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-
-        Return Info
-
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        result = args(0)
-
-        Return True
-
-    End Function
-
-End Class
+End Namespace

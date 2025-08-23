@@ -1,52 +1,28 @@
 ﻿Imports System.Numerics
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
-Public Class vbtest2
+Namespace VbTest
 
-    Implements IComputable
+    <Computable("vbtest2", "separator, vector", "Joins the elements of a vector with a separator.")>
+    Public Class VbTest2
+        Inherits MathcadFunction(Of String, Complex(,), String)
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+        Public Overrides Function Execute(separator As String, vector As Complex(,), context As Context) As String
+            Try
+                Dim elements = New List(Of String)()
+                For i As Integer = 0 To vector.GetLength(0) - 1
+                    ' Assuming a column vector
+                    elements.Add(vector(i, 0).ToString())
+                Next
+                Return String.Join(separator, elements)
+            Catch ex As Exception
+                context.LogError($"vbtest2 failed: {ex.Message}")
+                Return $"ERROR: {ex.Message}"
+            End Try
+        End Function
 
-        Get
-            Return New FunctionInfo("vbtest2", "separ, v", "return string: v[0] separ v[1] separ ...",
-                GetType(String), New Type() {GetType(String), GetType(Complex(,))})
-        End Get
+    End Class
 
-    End Property
-
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-
-        Return Info
-
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        Try
-
-            Dim d = CType(args(0), String)
-            Dim v = CType(args(1), Complex(,))
-
-            Dim len As Integer = v.GetLength(0)
-
-            Dim list = New List(Of String)()
-
-            For n As Integer = 0 To len - 1
-                list.Add(String.Format("{0} + {1} * i", v(n, 0).Real, v(n, 0).Imaginary))
-            Next
-
-            result = String.Join(d, list.ToArray())
-
-        Catch ex As Exception
-
-            Return False
-
-        End Try
-
-        Return True
-
-    End Function
-
-End Class
+End Namespace

@@ -10,7 +10,7 @@ namespace NetEFI.Computables
         /// <summary>
         /// Gets the full information about the function required for its registration.
         /// </summary>
-        FunctionInfo Info { get; }
+        FunctionInfo Info { get; set; }
 
         /// <summary>
         /// (Optional) Gets localized information about the function.

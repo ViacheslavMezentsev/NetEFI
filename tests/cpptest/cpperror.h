@@ -1,30 +1,31 @@
 #pragma once
 
-public ref class cpperror: public IComputable
+#include "stdafx.h"
+
+using namespace System::Numerics;
+using namespace NetEFI::Computables;
+using namespace NetEFI::Design;
+using namespace NetEFI::Functions;
+using namespace NetEFI::Runtime;
+
+namespace cpptest
 {
-public:
-
-    static array<String^>^ Errors = gcnew array<String^>(4)
-    { 
-        "cpperror: text example 1",
-        "cpperror: text example 2", 
-        "cpperror: text example 3",
-        "cpperror: text example 4"
-    };
-
-    virtual property FunctionInfo^ Info
+    [Computable( "cpperror", "n", "Throws a custom error specified by index n." )]
+    public ref class CppError : public MathcadFunction<Complex, String^>
     {
-        FunctionInfo^ get()
-        { 
-            return gcnew FunctionInfo( "cpperror", "s", "return string",
-                String::typeid, gcnew array<Type^> { Complex::typeid } );
+    public:
+        // The list of custom error messages for this function.
+        static array<String^>^ Errors = gcnew array<String^> {
+            "cpperror: This is custom error message 1.",
+                "cpperror: This is custom error message 2.",
+                "cpperror: This is custom error message 3.",
+                "cpperror: This is custom error message 4."
+        };
+
+        virtual String^ Execute( Complex n, Context^ context ) override
+        {
+            // Throws a custom EFIException.
+            throw gcnew EFIException( ( int ) n.Real, 1 );
         }
-    }
-
-    virtual FunctionInfo^ GetFunctionInfo( String^ lang ) { return Info; }
-
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
-    {
-        throw gcnew EFIException( ( int ) ( ( Complex ) args[0] ).Real, 1 );
-    }
-};
+    };
+}

@@ -3,31 +3,32 @@
 namespace NetEFI.Computables
 {
     /// <summary>
-    /// An attribute to mark classes that implement user-defined functions.
-    /// This can be used in the future for metadata-driven features like reflection-based registration.
+    /// Describes a user-defined function for Mathcad.
+    /// Place this attribute on any class that inherits from MathcadFunction.
     /// </summary>
     [AttributeUsage( AttributeTargets.Class, Inherited = false, AllowMultiple = false )]
     public sealed class ComputableAttribute: Attribute
     {
         /// <summary>
-        /// A string describing the function's signature (e.g., "arg1, arg2").
+        /// The name of the function as it will be called in Mathcad (e.g., "my.func").
         /// </summary>
-        public string Parameters { get; }
+        public string Name { get; }
 
         /// <summary>
-        /// A brief description of what the function does.
+        /// A brief description of the function's purpose.
         /// </summary>
         public string Description { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ComputableAttribute"/> class.
+        /// A comma-separated string of parameter names (e.g., "filePath, encoding").
         /// </summary>
-        /// <param name="description">A brief description of the function.</param>
-        /// <param name="parameters">A string describing the function parameters.</param>
-        public ComputableAttribute( string description, string parameters = "" )
+        public string Parameters { get; }
+
+        public ComputableAttribute( string name, string parameters, string description )
         {
-            Description = description;
+            Name = name;
             Parameters = parameters;
+            Description = description;
         }
     }
 }

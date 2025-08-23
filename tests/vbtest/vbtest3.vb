@@ -1,55 +1,36 @@
 ﻿Imports System.Numerics
 Imports NetEFI.Computables
 Imports NetEFI.Design
+Imports NetEFI.Functions
 
-Public Class vbtest3
-    Implements IComputable
+Namespace VbTest
 
-    Public ReadOnly Property Info() As FunctionInfo Implements IComputable.Info
+    <Computable("vbtest3", "n, m", "Returns an n x m matrix of complex numbers.")>
+    Public Class VbTest3
+        Inherits MathcadFunction(Of Complex, Complex, Complex(,))
 
-        Get
-            Return New FunctionInfo("vbtest3", "n, m", "return matrix n x m",
-                GetType(Complex(,)), New Type() {GetType(Complex), GetType(Complex)})
-        End Get
+        Public Overrides Function Execute(nComplex As Complex, mComplex As Complex, context As Context) As Complex(,)
+            Try
+                Dim n = CInt(nComplex.Real)
+                Dim m = CInt(mComplex.Real)
 
-    End Property
+                If n <= 0 OrElse m <= 0 Then
+                    Return New Complex(,) {} ' Return empty matrix for invalid dimensions
+                End If
 
-    Public Function GetFunctionInfo(lang As String) As FunctionInfo Implements IComputable.GetFunctionInfo
-
-        Return Info
-
-    End Function
-
-    Public Function NumericEvaluation(args As Object(), ByRef result As Object, context As Context) As Boolean _
-        Implements IComputable.NumericEvaluation
-
-        Dim mat As Complex(,) = Nothing
-
-        result = mat
-
-        Try
-
-            Dim n = CInt(CType(args(0), Complex).Real)
-            Dim m = CInt(CType(args(1), Complex).Real)
-
-            mat = New Complex(n - 1, m - 1) {}
-
-            For r As Integer = 0 To n - 1
-                For c As Integer = 0 To m - 1
-                    mat(r, c) = New Complex(r, c)
+                Dim matrix = New Complex(n - 1, m - 1) {}
+                For r As Integer = 0 To n - 1
+                    For c As Integer = 0 To m - 1
+                        matrix(r, c) = New Complex(r, c)
+                    Next
                 Next
-            Next
+                Return matrix
+            Catch ex As Exception
+                context.LogError($"vbtest3 failed: {ex.Message}")
+                Return New Complex(,) {} ' Return empty matrix on error
+            End Try
+        End Function
 
-            result = mat
+    End Class
 
-        Catch ex As Exception
-
-            Return False
-
-        End Try
-
-        Return True
-
-    End Function
-
-End Class
+End Namespace

@@ -1,37 +1,33 @@
 ﻿using System.Numerics;
 using System.Collections.Generic;
-
+using System.Text;
 using NetEFI.Computables;
 using NetEFI.Design;
+using NetEFI.Functions;
 
-public class cstest2: IComputable
+namespace cstest
 {
-    public FunctionInfo Info => new FunctionInfo( "cstest2", "separ, v", "return string: v[0] separ v[1] separ ...",
-            typeof( string ), new[] { typeof( string ), typeof( Complex[,] ) } );
-
-    public FunctionInfo GetFunctionInfo( string lang ) => Info;
-
-    public bool NumericEvaluation( object[] args, out object result, Context context )
+    [Computable( "cstest2", "separator, v", "Returns a string representation of a vector with a separator." )]
+    public class CsTest2: MathcadFunction<string, Complex[,], string>
     {
-        try
+        public override string Execute( string separator, Complex[,] v, Context context )
         {
-            var d = ( string ) args[0];
-            var v = ( Complex[,] ) args[1];
+            if ( v == null || v.GetLength( 0 ) == 0 )
+            {
+                return "";
+            }
 
-            var len = v.GetLength( 0 );
-
-            var list = new List<string>();
-
-            for ( var n = 0; n < len; n++ ) list.Add( string.Format( "{0} + {1} * i", v[n, 0].Real, v[n, 0].Imaginary ) );
-
-            result = string.Join( d, list.ToArray() );
+            var sb = new StringBuilder();
+            for ( var i = 0; i < v.GetLength( 0 ); i++ )
+            {
+                // Assuming a column vector
+                sb.Append( v[ i, 0 ].ToString() );
+                if ( i < v.GetLength( 0 ) - 1 )
+                {
+                    sb.Append( separator );
+                }
+            }
+            return sb.ToString();
         }
-        catch
-        {
-            result = null;
-            return false;
-        }
-
-        return true;
     }
 }

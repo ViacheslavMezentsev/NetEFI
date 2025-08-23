@@ -5,8 +5,6 @@ using namespace NetEFI;
 
 extern LRESULT CallbackFunction( void * out, ... );
 
-#define MAX_FUNCTIONS_COUNT     10000UL
-#define DYNAMIC_BLOCK_SIZE      40U
 
 CMathcadEfi MathcadEfi;
 
@@ -66,7 +64,7 @@ void Manager::Log( String ^ text )
     {
         File::AppendAllText( LogFile, text, Encoding::UTF8 );
     }
-    catch ( ... ) { assert(false); }
+    catch ( ... ) { }
 }
 
 
@@ -241,7 +239,7 @@ void Manager::CreateUserErrorMessageTable( array < String ^ > ^ errors )
 }
 
 
-PVOID Manager::CreateUserFunction( NetEFI::Design::FunctionInfo^ info, PVOID p )
+PVOID Manager::CreateUserFunction( FunctionInfo^ info, PVOID p )
 {
     FUNCTIONINFO fi {};
 
@@ -345,170 +343,242 @@ void Manager::InjectCode( PBYTE & p, int assemblyId, int functionId )
 // Register user functions.
 bool Manager::RegisterFunctions()
 {
-    if ( Assemblies == nullptr ) return false;
+	if ( Assemblies == nullptr ) return false;
 
-    int totalCount = 0;
-    PBYTE pCode = MathcadEfi.DynamicCode;
-    auto errorMessages = gcnew List<String ^>();
+	int totalCount = 0;
+	PBYTE pCode = MathcadEfi.DynamicCode;
+	auto errorMessages = gcnew List<String^>();
 
-    try
-    {
-        // Register all functions in Mathcad.        
-        for ( int k = 0; k < Assemblies->Count; k++ )
-        {
-            auto assemblyInfo = Assemblies[k];
+	try
+	{
+		for ( int k = 0; k < Assemblies->Count; k++ )
+		{
+			auto assemblyInfo = Assemblies[k];
+			int count = 0;
 
-            int count = 0;
+			for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
+			{
+				auto funcobj = ( IComputable^ ) assemblyInfo->Functions[n];
 
-            for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
-            {
-                if ( totalCount >= MAX_FUNCTIONS_COUNT ) break;
+				// Просто берем готовый FunctionInfo!
+				auto info = funcobj->GetFunctionInfo( CultureInfo::CurrentCulture->ThreeLetterISOLanguageName );
 
-                auto lang = CultureInfo::CurrentCulture->ThreeLetterISOLanguageName;
+				if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
-                auto funcobj = assemblyInfo->Functions[n];
+				InjectCode( pCode, k, n );
 
-                auto info = ( ( IComputable ^ ) funcobj )->GetFunctionInfo( lang );
+				auto text = String::Format( "[ {0} ] {1}", info->Parameters, info->Description );
+				LogInfo( "{0} - {1}", info->Name, text );
 
-                if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
+				count++;
+				totalCount++;
 
-                InjectCode( pCode, k, n );
+				// Логика с таблицей ошибок остается прежней
+				auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
 
-                auto params = gcnew List< String ^ >();
+                if ( errorsFieldInfo != nullptr )
+				{
+					try
+					{
+						auto errors = ( array<String^>^ ) errorsFieldInfo->GetValue( nullptr );
 
-                for each ( auto type in info->ArgTypes ) params->Add( type->ToString() );
+                        if ( errors != nullptr ) errorMessages->AddRange( errors );
+					}
+					catch ( Exception^ ex )
+					{
+						Manager::LogError( "Failed to get 'Errors' field from type {0}: {1}",
+							errorsFieldInfo->DeclaringType->FullName, ex->Message );
+					}
+				}
+			}
 
-                auto text = ( info->Parameters->Length > 0 ) ? info->Parameters : String::Join( ",", params->ToArray() );
+			LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
+		}
 
-                text = String::Format( "[ {0} ] {1}", text, info->Description );
+		CreateUserErrorMessageTable( errorMessages->ToArray() );
+	}
+	catch ( System::Exception^ ex )
+	{
+		LogError( ex->ToString() );
+		return false;
+	}
 
-                LogInfo( "{0} - {1}", info->Name, text );
-
-                count++;
-                totalCount++;                
-
-                auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
-
-                if ( errorsFieldInfo == nullptr ) continue;
-
-                try
-                {
-                    auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
-
-                    if ( errors != nullptr ) errorMessages->AddRange( errors );
-                }
-                catch ( System::Exception^ ex )
-                {
-                    LogError( "Failed to get 'Errors' field from type {0}: {1}", errorsFieldInfo->DeclaringType->FullName, ex->Message );
-                }
-            }
-
-            LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
-        }
-
-        // Note. The only one error table supported.
-        CreateUserErrorMessageTable( errorMessages->ToArray() );
-    }
-    catch ( System::Exception ^ ex )
-    {
-        LogError( ex->Message );
-
-        return false;
-    }
-
-    return true;
+	return true;
 }
 
 
 // Load user libraries.
 bool Manager::LoadAssemblies()
 {
-    Assemblies = gcnew List < AssemblyInfo ^ >();
+    // Статический HashSet для быстрой проверки поддерживаемых типов.
+    // Инициализируем его один раз.
+    auto types = gcnew array<Type^> { String::typeid, Complex::typeid, array<Complex, 2>::typeid };
 
-    if ( !Initialize() ) return false;
+    // Инициализируем наш HashSet из этого массива
+    SupportedTypes = gcnew HashSet<Type^>( types );
 
-    LogInfo( "Starting assembly scan in directory: {0}", AssemblyDirectory );
+    Assemblies = gcnew List<AssemblyInfo^>();
 
-    int totalFunctionsCount = 0;
+	if ( !Initialize() ) return false;
 
-    try
-    {
-        // Get all assemblies.
-        auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );        
+	LogInfo( "Starting assembly scan for MathcadFunction types..." );
 
-        // Find all types with IFunction interface.
-        for each ( auto path in libs )
-        {
-            try
-            {
-                if ( !IsManagedAssembly( path ) ) continue;
+	//Двухпроходный алгоритм.
 
-                // LoadFile vs. LoadFrom
-                // http://blogs.msdn.com/b/suzcook/archive/2003/09/19/loadfile-vs-loadfrom.aspx
+	// Шаг 1: Сканируем, чтобы посчитать функции и проверить типы.
+	int totalFunctionsCount = 0;
+    
+    // Сохраняем найденные типы.
+    List<Type^>^ foundFunctionTypes = gcnew List<Type^>();
+
+	try
+	{
+		auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
+
+		for each ( auto path in libs )
+		{
+			try
+			{
+				if ( !IsManagedAssembly( path ) ) continue;
+
                 auto assembly = Assembly::LoadFile( path );
 
-                auto assemblyInfo = gcnew AssemblyInfo( path );
+				for each ( Type ^ type in assembly->GetTypes() )
+				{
+					// Ищем публичные классы, унаследованные от нашего базового класса.
+					if ( type->IsPublic && !type->IsAbstract && MathcadFunctionBase::typeid->IsAssignableFrom( type ) )
+					{
+						// Проверяем наличие атрибута.
+                        // 1. Получаем все атрибуты как массив Object^.
+                        array<Object^>^ attributes = type->GetCustomAttributes( ComputableAttribute::typeid, false );
 
-                // Assembly and GetType().
-                // http://www.rsdn.ru/forum/dotnet/3154438?tree=tree
-                // http://www.codeproject.com/KB/cs/pluginsincsharp.aspx
-                for each ( Type ^ type in assembly->GetTypes() )
-                {
-                    if ( !type->IsPublic || !type->IsClass || !IComputable::typeid->IsAssignableFrom( type ) ) continue;
+                        // 2. Проверяем, что атрибут найден.
+                        if ( attributes->Length == 0 )
+                        {
+                            LogInfo( "Class {0} inherits from MathcadFunctionBase but is missing a [Computable] attribute. Skipping.", type->FullName );
+                            continue;
+                        }
 
-                    // Создаем экземпляр.
-                    Object^ instance = Activator::CreateInstance( type );
+						// Сохраняем тип для второго прохода.
+						foundFunctionTypes->Add( type );
+						totalFunctionsCount++;
+					}
+				}
+			}
+			catch ( Exception^ ex ) { LogError( "Could not scan assembly '{0}': {1}", Path::GetFileName( path ), ex->Message ); }
+		}
+	}
+	catch ( Exception^ ex ) { LogError( "Failed during assembly scanning phase: {0}", ex->ToString() ); return false; }
 
-                    // Безопасно приводим его к нужному интерфейсному типу.
-                    IComputable^ computableInstance = safe_cast<IComputable^>(instance);
+	if ( totalFunctionsCount == 0 )
+	{
+		LogInfo( "No functions found." );
+		return true;
+	}
 
-                    // Добавляем в строго типизированный список.
-                    assemblyInfo->Functions->Add( computableInstance ); 
-                }
+	// Шаг 2: Выделяем память для трамплинов.
+	const size_t TRAMPOLINE_SIZE = 40;
+	size_t requiredSize = totalFunctionsCount * TRAMPOLINE_SIZE;
 
-                if ( assemblyInfo->Functions->Count > 0 )
-                {
-                    Assemblies->Add( assemblyInfo );
+	MathcadEfi.DynamicCode = ( PBYTE )::VirtualAllocEx( ::GetCurrentProcess(), 0, requiredSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
-                    totalFunctionsCount += assemblyInfo->Functions->Count;
-                }
-            }
-            catch ( ReflectionTypeLoadException^ ex )
+	if ( MathcadEfi.DynamicCode == nullptr )
+	{
+		LogError( "Dynamic memory allocation failed for {0} bytes.", requiredSize );
+		return false;
+	}
+
+	LogInfo( "Allocated {0} bytes for {1} function trampolines.", requiredSize, totalFunctionsCount );
+
+	// Шаг 3: Создаем экземпляры и собираем FunctionInfo.
+	try
+	{
+		Dictionary<Assembly^, AssemblyInfo^>^ assemblyMap = gcnew Dictionary<Assembly^, AssemblyInfo^>();
+
+		for each ( Type ^ funcType in foundFunctionTypes )
+		{
+			// НАЧАЛО МАГИИ РЕФЛЕКСИИ.
+
+            // 1. Получаем атрибут правильным способом.
+            array<Object^>^ attributes = funcType->GetCustomAttributes( ComputableAttribute::typeid, false );
+
+            // Мы уже знаем, что он есть, поэтому просто берем первый.
+            auto attr = safe_cast< ComputableAttribute^ >( attributes[0] );
+
+            // 2. Ищем базовый generic-тип (MathcadFunction<...>)
+            Type^ baseType = funcType->BaseType;
+
+            while ( baseType != nullptr && !baseType->IsGenericType )
             {
-                LogError( "Failed to load assembly '{0}' due to a type load error. This usually means a dependency is missing.", Path::GetFileName( path ) );
-
-                for each ( Exception ^ loaderEx in ex->LoaderExceptions )
-                {
-                    LogError( "  - LoaderException: {0}", loaderEx->Message );
-                }
+                baseType = baseType->BaseType;
             }
-            catch ( Exception ^ ex )
-            {
-                LogError( "Failed to process assembly '{0}'. Full exception details:", Path::GetFileName( path ) );
 
-                // ex->ToString() включает тип исключения, сообщение и полный stack trace!
-                LogError( ex->ToString() );
+            if ( baseType == nullptr )
+            {
+                LogError( "Could not find a generic base for function type {0}. Skipping.", funcType->FullName );
                 continue;
             }
-        }
 
-        // Расчёт необходимого размера динамической памяти в зависимости от
-        // максимального числа поддерживаемых функций.
-        size_t size = totalFunctionsCount * DYNAMIC_BLOCK_SIZE;
+			// 3. Извлекаем generic-аргументы (TArg1, TArg2, ..., TResult).
+			array<Type^>^ genericArgs = baseType->GetGenericArguments();
 
-        MathcadEfi.DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
+			if ( genericArgs->Length == 0 )
+			{
+				LogError( "Generic base for {0} has no generic arguments. Skipping.", funcType->FullName );
+				continue;
+			}
 
-        // TODO: Handle errors.
-        if ( MathcadEfi.DynamicCode == nullptr ) throw gcnew System::Exception( "Dynamic memory allocation failed" );
-    }
-    catch ( System::Exception ^ ex )
-    {
-        LogError( ex->Message );
+			// 4. Определяем типы аргументов и возвращаемого значения.
+			Type^ returnType = genericArgs[genericArgs->Length - 1];
+			array<Type^>^ argTypes = gcnew array<Type^>( genericArgs->Length - 1 );
+			Array::Copy( genericArgs, argTypes, argTypes->Length );
 
-        return false;
-    }
+			// 5. Проверяем, что все типы поддерживаются Mathcad.
+			bool typesAreValid = SupportedTypes->Contains( returnType );
 
-    LogInfo( "Assembly scan finished. Found {0} total functions.", totalFunctionsCount );
+			for each ( Type ^ argType in argTypes )
+			{
+				if ( !SupportedTypes->Contains( argType ) ) typesAreValid = false;
+			}
+			if ( !typesAreValid )
+			{
+				LogError( "Function {0} ('{1}') uses unsupported argument or return types. Skipping.", funcType->FullName, attr->Name );
+				continue;
+			}
 
-    return true;
+			// 6. Собираем FunctionInfo.
+			auto functionInfo = gcnew FunctionInfo( attr->Name, attr->Parameters, attr->Description, returnType, argTypes );
+
+			// 7. Создаем экземпляр функции.
+			auto instance = ( MathcadFunctionBase^ ) Activator::CreateInstance( funcType );
+
+			// 8. Передаем в него собранный FunctionInfo
+			// Мы используем явную реализацию интерфейса, чтобы "записать" в свойство.
+			( ( IComputable^ ) instance )->Info = functionInfo;
+
+			// КОНЕЦ МАГИИ РЕФЛЕКСИИ.
+
+			// Добавляем экземпляр в правильный AssemblyInfo.
+			AssemblyInfo^ assemblyInfo;
+
+			if ( !assemblyMap->TryGetValue( funcType->Assembly, assemblyInfo ) )
+			{
+				assemblyInfo = gcnew AssemblyInfo( funcType->Assembly->Location );
+
+				assemblyMap->Add( funcType->Assembly, assemblyInfo );
+				Assemblies->Add( assemblyInfo );
+			}
+
+			assemblyInfo->Functions->Add( instance );
+		}
+	}
+	catch ( Exception^ ex )
+	{
+		LogError( "Failed during function instantiation phase: {0}", ex->ToString() );
+		::VirtualFreeEx( ::GetCurrentProcess(), MathcadEfi.DynamicCode, 0, MEM_RELEASE );
+		MathcadEfi.DynamicCode = nullptr;
+		return false;
+	}
+
+	return true;
 }

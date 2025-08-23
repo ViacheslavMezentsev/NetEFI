@@ -1,80 +1,60 @@
 #pragma once
 
-using namespace System;
-using namespace System::IO;
-using namespace System::Text;
-using namespace System::Reflection;
-using namespace System::Runtime::InteropServices;
-using namespace System::Globalization;
-using namespace System::Collections::Generic;
+#include "stdafx.h"
 
+using namespace System;
+using namespace System::Reflection;
+using namespace System::Collections::Generic;
+using namespace System::Linq;
 
 using namespace NetEFI::Computables;
 using namespace NetEFI::Design;
-using namespace NetEFI::Runtime;
+using namespace NetEFI::Functions;
 
-using namespace NetEFI;
-
-public ref class cpptest: public IComputable
+namespace cpptest
 {
-public:
-
-    virtual property FunctionInfo^ Info
+    [Computable( "cpptest", "cmd", "A utility function to inspect the C++/CLI test assembly." )]
+    public ref class CppTest : public MathcadFunction<String^, String^>
     {
-        FunctionInfo^ get()
-        { 
-            return gcnew FunctionInfo( "cpptest", "cmd", "return info",
-                String::typeid, gcnew array<Type ^> { String::typeid }
-            );
-        }
-    }
-
-    virtual FunctionInfo^ GetFunctionInfo( String^ lang )
-    {
-        return Info;
-    }
-
-    virtual bool NumericEvaluation( array< Object^ > ^ args, [Out] Object ^ % result, Context ^ context )
-    {
-        result = "help: info, list";
-
-        auto assembly = Assembly::GetExecutingAssembly();
-
-        try
+    public:
+        virtual String^ Execute( String^ cmd, Context^ context ) override
         {
-            auto cmd = ( String^ ) args[0];
+            auto assembly = Assembly::GetExecutingAssembly();
 
-            if ( cmd == "info" )
+            try
             {
-                auto name = assembly->GetName();
-
-                result = String::Format( "{0}: {1}", name->Name, name->Version );
-            }
-
-            else if ( cmd == "list" )
-            {
-                auto list = gcnew List<String^>();
-
-                auto types = assembly->GetTypes();
-
-                for each ( Type^ type in types )
+                if ( cmd->Equals( "info", StringComparison::OrdinalIgnoreCase ) )
                 {
-                    if ( !type->IsPublic || type->IsAbstract || !IComputable::typeid->IsAssignableFrom( type ) ) continue;
-
-                    auto f = ( IComputable^ ) Activator::CreateInstance( type );
-                        
-                    list->Add( f->Info->Name );
+                    auto name = assembly->GetName();
+                    return String::Format( "{0}: {1}", name->Name, name->Version );
                 }
 
-                result = String::Join( ", ", list->ToArray() );
-            }
-        }
-        catch ( ... )
-        {
-            result = nullptr;
-            return false;
-        }
+                if ( cmd->Equals( "list", StringComparison::OrdinalIgnoreCase ) )
+                {
+                    auto list = gcnew List<String^>();
+                    auto types = assembly->GetTypes();
 
-        return true;
-    }
-};
+                    for each ( Type ^ type in types )
+                    {
+                        if ( type->IsPublic && !type->IsAbstract && MathcadFunctionBase::typeid->IsAssignableFrom( type ) )
+                        {
+                            array<Object^>^ attributes = type->GetCustomAttributes( ComputableAttribute::typeid, false );
+                            if ( attributes->Length > 0 )
+                            {
+                                auto attr = safe_cast< ComputableAttribute^ >( attributes[0] );
+                                list->Add( attr->Name );
+                            }
+                        }
+                    }
+                    return String::Join( ", ", list );
+                }
+            }
+            catch ( Exception^ ex )
+            {
+                return String::Format( "ERROR: {0}", ex->Message );
+            }
+
+            return "help: info, list";
+        }
+    };
+}
