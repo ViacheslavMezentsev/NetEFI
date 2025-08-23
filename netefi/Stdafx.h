@@ -9,9 +9,14 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
+#include <fstream>
 #include <windows.h>
+#include <ShlObj.h>
 #include <msclr/marshal_cppstd.h>
 #include "mcadincl.h"
+
+#pragma comment(lib, "Shell32.lib")
 
 #pragma region using namespaces
 

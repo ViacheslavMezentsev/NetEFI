@@ -11,11 +11,15 @@ extern LRESULT CallbackFunction( void * out, ... );
 CMathcadEfi MathcadEfi;
 
 CMathcadEfi::CMathcadEfi()
+    : Attached(false), AssemblyId(-1), FunctionId(-1), DynamicCode(nullptr),
+    CreateUserFunction( nullptr ),
+    CreateUserErrorMessageTable( nullptr ),
+    MathcadAllocate(nullptr),
+    MathcadFree(nullptr),
+    MathcadArrayAllocate(nullptr),
+    MathcadArrayFree(nullptr),
+    isUserInterrupted(nullptr)
 {
-    AssemblyId = -1;
-    FunctionId = -1;
-    DynamicCode = nullptr;
-
     auto moduleName = Path::Combine( Manager::AssemblyDirectory, "..\\mcaduser.dll" );
 
     marshal_context context;
@@ -62,7 +66,7 @@ void Manager::Log( String ^ text )
     {
         File::AppendAllText( LogFile, text, Encoding::UTF8 );
     }
-    catch ( ... ) {}
+    catch ( ... ) { assert(false); }
 }
 
 
@@ -126,9 +130,19 @@ bool Manager::Initialize()
 {
     auto process = Process::GetCurrentProcess();
 
-    auto fileInfo = FileVersionInfo::GetVersionInfo( process->MainModule->FileName );
+    LogInfo( "OS: {0}, 64-bit: {1}", Environment::OSVersion->ToString(), Environment::Is64BitOperatingSystem );
+    LogInfo( "Current Culture: {0}", CultureInfo::CurrentCulture->Name );
 
-    LogInfo( "{0} version {1}, {2}", fileInfo->ProductName, fileInfo->ProductVersion, fileInfo->LegalCopyright );
+    // Проверка прав администратора
+    auto identity = System::Security::Principal::WindowsIdentity::GetCurrent();
+    auto principal = gcnew System::Security::Principal::WindowsPrincipal( identity );
+    bool isAdmin = principal->IsInRole( System::Security::Principal::WindowsBuiltInRole::Administrator );
+
+    LogInfo( "Running as Administrator: {0}", isAdmin );
+
+    auto fileInfo = FileVersionInfo::GetVersionInfo(process->MainModule->FileName);
+
+    LogInfo("{0} version {1}, {2}", fileInfo->ProductName, fileInfo->ProductVersion, fileInfo->LegalCopyright);
 
     auto aname = ExecAssembly->GetName();
 
@@ -383,7 +397,10 @@ bool Manager::RegisterFunctions()
 
                     if ( errors != nullptr ) errorMessages->AddRange( errors );
                 }
-                catch (...) {}
+                catch ( System::Exception^ ex )
+                {
+                    LogError( "Failed to get 'Errors' field from type {0}: {1}", errorsFieldInfo->DeclaringType->FullName, ex->Message );
+                }
             }
 
             LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
@@ -410,10 +427,14 @@ bool Manager::LoadAssemblies()
 
     if ( !Initialize() ) return false;
 
+    LogInfo( "Starting assembly scan in directory: {0}", AssemblyDirectory );
+
+    int totalFunctionsCount = 0;
+
     try
     {
         // Get all assemblies.
-        auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );
+        auto libs = Directory::GetFiles( AssemblyDirectory, "*.dll" );        
 
         // Find all types with IFunction interface.
         for each ( auto path in libs )
@@ -445,19 +466,35 @@ bool Manager::LoadAssemblies()
                     assemblyInfo->Functions->Add( computableInstance ); 
                 }
 
-                if ( assemblyInfo->Functions->Count > 0 ) Assemblies->Add( assemblyInfo );
+                if ( assemblyInfo->Functions->Count > 0 )
+                {
+                    Assemblies->Add( assemblyInfo );
+
+                    totalFunctionsCount += assemblyInfo->Functions->Count;
+                }
+            }
+            catch ( ReflectionTypeLoadException^ ex )
+            {
+                LogError( "Failed to load assembly '{0}' due to a type load error. This usually means a dependency is missing.", Path::GetFileName( path ) );
+
+                for each ( Exception ^ loaderEx in ex->LoaderExceptions )
+                {
+                    LogError( "  - LoaderException: {0}", loaderEx->Message );
+                }
             }
             catch ( Exception ^ ex )
             {
-                LogError( ex->Message );
+                LogError( "Failed to process assembly '{0}'. Full exception details:", Path::GetFileName( path ) );
+
+                // ex->ToString() включает тип исключения, сообщение и полный stack trace!
+                LogError( ex->ToString() );
                 continue;
             }
         }
 
-        // TODO: Use calculated number of functions instead of MAX_FUNCTIONS_COUNT.
         // Расчёт необходимого размера динамической памяти в зависимости от
         // максимального числа поддерживаемых функций.
-        size_t size = MAX_FUNCTIONS_COUNT * DYNAMIC_BLOCK_SIZE;
+        size_t size = totalFunctionsCount * DYNAMIC_BLOCK_SIZE;
 
         MathcadEfi.DynamicCode = ( PBYTE ) ::VirtualAllocEx( ::GetCurrentProcess(), 0, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE );
 
@@ -470,6 +507,8 @@ bool Manager::LoadAssemblies()
 
         return false;
     }
+
+    LogInfo( "Assembly scan finished. Found {0} total functions.", totalFunctionsCount );
 
     return true;
 }

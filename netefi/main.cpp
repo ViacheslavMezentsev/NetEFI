@@ -106,7 +106,7 @@ LRESULT Evaluate( IComputable ^ func, array < Object ^ > ^ args, Object ^ % lval
 
                     if ( errors != nullptr ) offset += errors->GetLength(0);
                 }
-                catch ( ... ) {}
+                catch ( ... ) { assert(false); }
             }
         }
 
@@ -293,6 +293,37 @@ void RegisterFunctions()
 
 #pragma unmanaged
 
+// Простая, надежная, полностью неуправляемая функция для записи в лог-файл.
+// Используется только для критических ошибок в DllEntryPoint.
+void UnmanagedLog( const char* message )
+{
+    // Получаем путь к папке %APPDATA%
+    char appDataPath[MAX_PATH];
+
+    if ( SUCCEEDED( SHGetFolderPathA( NULL, CSIDL_APPDATA, NULL, 0, appDataPath ) ) )
+    {
+        // Формируем полный путь к лог-файлу
+        std::string logPath = std::string( appDataPath ) + "\\Mathsoft\\Mathcad\\netefi_critical.log";
+
+        // Открываем файл для добавления записи (append)
+        std::ofstream logFile( logPath, std::ios_base::app );
+
+        if ( logFile.is_open() )
+        {
+            // Получаем текущее время для записи в лог
+            char timeStr[128];
+            time_t now = time(0);
+            tm tstruct;
+
+            localtime_s( &tstruct, &now );
+            strftime( timeStr, sizeof( timeStr ), "%Y-%m-%d %H:%M:%S", &tstruct );
+
+            // Записываем сообщение
+            logFile << timeStr << ": " << message << std::endl;
+        }
+    }
+}
+
 LRESULT CallbackFunction( void * out, ... )
 {
     return ::UserFunction( & out );
@@ -307,9 +338,18 @@ BOOL WINAPI DllEntryPoint( HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved
         {
             RegisterFunctions();
         }
-        catch ( ... )
+        // Ловим ТОЛЬКО управляемые исключения, чтобы извлечь из них сообщение.
+        catch ( const std::exception& ex )
         {
-			// TODO: Add unmanaged logging here.
+            // Это для стандартных исключений C++ (маловероятно, но возможно)
+            UnmanagedLog( "Critical unmanaged C++ exception during initialization." );
+            UnmanagedLog( ex.what() );
+        }
+        catch (...) // Ловим все остальное, включая управляемые исключения .NET
+        {
+            // Мы не можем безопасно получить здесь сообщение из .NET исключения,
+            // но мы можем зафиксировать сам факт сбоя.
+            UnmanagedLog( "Critical unknown (likely .NET) exception during initialization." );
         }
     }
 
