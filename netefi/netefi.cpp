@@ -1,16 +1,14 @@
 #include "stdafx.h"
 #include "Manager.h"
 
-// Make sure these namespaces are available, ideally from stdafx.h
-using namespace NetEFI::Computables;
-using namespace NetEFI::Design;
+using namespace NetEFI::Runtime;
 using namespace NetEFI::Functions;
 
 namespace NetEFI
 {
     // The main class for the built-in 'netefi' function.
     [Computable( "netefi", "cmd", "NetEFI host command interface. Returns help string by default." )]
-    public ref class netefi : public MathcadFunction<String^, String^>
+    public ref class netefi : public CustomFunction<String^, String^>
     {
     private:
         /// <summary>
@@ -29,14 +27,19 @@ namespace NetEFI
                     return String::Format( "ERROR: Assembly '{0}' not found in the Custom Functions directory.", assemblyName );
                 }
 
+                // We will use Reflection to find all valid function types.
                 auto assembly = Assembly::LoadFrom( assemblyPath );
 
                 auto functionTypes = gcnew List<Type^>();
 
+                // Iterate through all types in the loaded assembly.
                 for each ( Type ^ type in assembly->GetTypes() )
                 {
-                    if ( type->IsPublic && !type->IsAbstract && MathcadFunctionBase::typeid->IsAssignableFrom( type ) )
+                    // The check should be against the non-generic base class 'CustomFunctionBase'.
+                    // 'IsAssignableFrom' correctly checks for inheritance.
+                    if ( type->IsPublic && !type->IsAbstract && CustomFunctionBase::typeid->IsAssignableFrom( type ) )
                     {
+                        // The check for the attribute remains the same and is correct.
                         if ( type->GetCustomAttributes( ComputableAttribute::typeid, false )->Length > 0 )
                         {
                             functionTypes->Add( type );

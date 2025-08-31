@@ -1,13 +1,12 @@
 ﻿Imports System.Numerics
-Imports NetEFI.Computables
-Imports NetEFI.Design
 Imports NetEFI.Functions
+Imports NetEFI.Runtime
 
 Namespace VbTest
 
     <Computable("vbtest2", "separator, vector", "Joins the elements of a vector with a separator.")>
     Public Class VbTest2
-        Inherits MathcadFunction(Of String, Complex(,), String)
+        Inherits CustomFunction(Of String, Complex(,), String)
 
         Public Overrides Function Execute(separator As String, vector As Complex(,), context As Context) As String
             Try

@@ -23,4 +23,8 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>

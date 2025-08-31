@@ -343,67 +343,71 @@ void Manager::InjectCode( PBYTE & p, int assemblyId, int functionId )
 // Register user functions.
 bool Manager::RegisterFunctions()
 {
-	if ( Assemblies == nullptr ) return false;
+    if ( Assemblies == nullptr ) return false;
 
-	int totalCount = 0;
-	PBYTE pCode = MathcadEfi.DynamicCode;
-	auto errorMessages = gcnew List<String^>();
+    int totalCount = 0;
+    PBYTE pCode = MathcadEfi.DynamicCode;
+    auto errorMessages = gcnew List<String^>();
 
-	try
-	{
-		for ( int k = 0; k < Assemblies->Count; k++ )
-		{
-			auto assemblyInfo = Assemblies[k];
-			int count = 0;
+    try
+    {
+        for ( int k = 0; k < Assemblies->Count; k++ )
+        {
+            auto assemblyInfo = Assemblies[k];
+            int count = 0;
 
-			for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
-			{
-				auto funcobj = ( IComputable^ ) assemblyInfo->Functions[n];
+            for ( int n = 0; n < assemblyInfo->Functions->Count; n++ )
+            {
+                auto funcobj = assemblyInfo->Functions[n];
 
-				// Просто берем готовый FunctionInfo!
-				auto info = funcobj->GetFunctionInfo( CultureInfo::CurrentCulture->ThreeLetterISOLanguageName );
+                auto info = funcobj->GetFunctionInfo( CultureInfo::CurrentCulture->ThreeLetterISOLanguageName );
 
-				if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
+                if ( CreateUserFunction( info, pCode ) == nullptr ) continue;
 
-				InjectCode( pCode, k, n );
+                InjectCode( pCode, k, n );
 
-				auto text = String::Format( "[ {0} ] {1}", info->Parameters, info->Description );
-				LogInfo( "{0} - {1}", info->Name, text );
+                auto text = String::Format( "[ {0} ] {1}", info->Parameters, info->Description );
+                LogInfo( "{0} - {1}", info->Name, text );
 
-				count++;
-				totalCount++;
+                count++;
+                totalCount++;
 
-				// Логика с таблицей ошибок остается прежней
-				auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
+                try
+                {
+                    // 1. Получаем все атрибуты [Error]. Полагаемся на порядок по умолчанию.
+                    array<Object^>^ errorAttributes = funcobj->GetType()->GetCustomAttributes( ErrorAttribute::typeid, false );
 
-                if ( errorsFieldInfo != nullptr )
-				{
-					try
-					{
-						auto errors = ( array<String^>^ ) errorsFieldInfo->GetValue( nullptr );
+                    // 2. Если атрибуты найдены, просто проходим по ним и собираем сообщения.
+                    for each ( Object ^ attrObj in errorAttributes )
+                    {
+                        auto attr = safe_cast< ErrorAttribute^ >( attrObj );
 
-                        if ( errors != nullptr ) errorMessages->AddRange( errors );
-					}
-					catch ( Exception^ ex )
-					{
-						Manager::LogError( "Failed to get 'Errors' field from type {0}: {1}",
-							errorsFieldInfo->DeclaringType->FullName, ex->Message );
-					}
-				}
-			}
+                        // 3. Добавляем сообщение в общий список для Mathcad.
+                        errorMessages->Add( attr->Message );
+                    }
+                }
+                catch ( Exception^ ex )
+                {
+                    Manager::LogError( "Failed to get [Error] attributes from type {0}: {1}",
+                        funcobj->GetType()->FullName, ex->Message );
+                }
+            }
 
-			LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
-		}
+            LogInfo( "{0}: {1} function(s) loaded.", Path::GetFileName( assemblyInfo->Path ), count );
+        }
 
-		CreateUserErrorMessageTable( errorMessages->ToArray() );
-	}
-	catch ( System::Exception^ ex )
-	{
-		LogError( ex->ToString() );
-		return false;
-	}
+        if ( errorMessages->Count > 0 )
+        {
+            CreateUserErrorMessageTable( errorMessages->ToArray() );
+        }
+    }
+    catch ( System::Exception^ ex )
+    {
+        LogError( ex->ToString() );
+        return false;
+    }
 
-	return true;
+    return true;
 }
 
 
@@ -421,7 +425,7 @@ bool Manager::LoadAssemblies()
 
 	if ( !Initialize() ) return false;
 
-	LogInfo( "Starting assembly scan for MathcadFunction types..." );
+	LogInfo( "Starting assembly scan for CustomFunction types..." );
 
 	//Двухпроходный алгоритм.
 
@@ -443,25 +447,24 @@ bool Manager::LoadAssemblies()
 
                 auto assembly = Assembly::LoadFile( path );
 
+                // Iterate through all types in the loaded assembly.
 				for each ( Type ^ type in assembly->GetTypes() )
 				{
-					// Ищем публичные классы, унаследованные от нашего базового класса.
-					if ( type->IsPublic && !type->IsAbstract && MathcadFunctionBase::typeid->IsAssignableFrom( type ) )
+                    // The check should be against the non-generic base class 'CustomFunctionBase'.
+                    // 'IsAssignableFrom' correctly checks for inheritance.
+					if ( type->IsPublic && !type->IsAbstract && CustomFunctionBase::typeid->IsAssignableFrom( type ) )
 					{
-						// Проверяем наличие атрибута.
-                        // 1. Получаем все атрибуты как массив Object^.
-                        array<Object^>^ attributes = type->GetCustomAttributes( ComputableAttribute::typeid, false );
-
-                        // 2. Проверяем, что атрибут найден.
-                        if ( attributes->Length == 0 )
+                        // The check for the attribute remains the same and is correct.
+                        if ( type->GetCustomAttributes( ComputableAttribute::typeid, false )->Length > 0 )
                         {
-                            LogInfo( "Class {0} inherits from MathcadFunctionBase but is missing a [Computable] attribute. Skipping.", type->FullName );
+                            foundFunctionTypes->Add( type );
+                            totalFunctionsCount++;
+                        }
+                        else
+                        {
+                            LogInfo( "Class {0} inherits from CustomFunctionBase but is missing a [Computable] attribute. Skipping.", type->FullName );
                             continue;
                         }
-
-						// Сохраняем тип для второго прохода.
-						foundFunctionTypes->Add( type );
-						totalFunctionsCount++;
 					}
 				}
 			}
@@ -497,15 +500,13 @@ bool Manager::LoadAssemblies()
 
 		for each ( Type ^ funcType in foundFunctionTypes )
 		{
-			// НАЧАЛО МАГИИ РЕФЛЕКСИИ.
-
             // 1. Получаем атрибут правильным способом.
             array<Object^>^ attributes = funcType->GetCustomAttributes( ComputableAttribute::typeid, false );
 
             // Мы уже знаем, что он есть, поэтому просто берем первый.
             auto attr = safe_cast< ComputableAttribute^ >( attributes[0] );
 
-            // 2. Ищем базовый generic-тип (MathcadFunction<...>)
+            // 2. Ищем базовый generic-тип (CustomFunction<...>)
             Type^ baseType = funcType->BaseType;
 
             while ( baseType != nullptr && !baseType->IsGenericType )
@@ -550,13 +551,11 @@ bool Manager::LoadAssemblies()
 			auto functionInfo = gcnew FunctionInfo( attr->Name, attr->Parameters, attr->Description, returnType, argTypes );
 
 			// 7. Создаем экземпляр функции.
-			auto instance = ( MathcadFunctionBase^ ) Activator::CreateInstance( funcType );
+			auto instance = ( CustomFunctionBase^ ) Activator::CreateInstance( funcType );
 
 			// 8. Передаем в него собранный FunctionInfo
 			// Мы используем явную реализацию интерфейса, чтобы "записать" в свойство.
-			( ( IComputable^ ) instance )->Info = functionInfo;
-
-			// КОНЕЦ МАГИИ РЕФЛЕКСИИ.
+			instance->Info = functionInfo;
 
 			// Добавляем экземпляр в правильный AssemblyInfo.
 			AssemblyInfo^ assemblyInfo;

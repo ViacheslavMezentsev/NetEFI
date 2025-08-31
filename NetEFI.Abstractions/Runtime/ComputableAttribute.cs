@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NetEFI.Computables
+namespace NetEFI.Runtime
 {
     /// <summary>
     /// Describes a user-defined function for Mathcad.

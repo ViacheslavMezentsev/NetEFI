@@ -31,11 +31,8 @@ using namespace System::Diagnostics;
 using namespace System::Globalization;
 using namespace System::Collections::Generic;
 
-using namespace NetEFI::Computables;
-using namespace NetEFI::Design;
 using namespace NetEFI::Functions;
 using namespace NetEFI::Runtime;
-
 
 using namespace msclr::interop;
 

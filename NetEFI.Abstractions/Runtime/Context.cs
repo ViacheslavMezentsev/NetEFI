@@ -1,6 +1,6 @@
-﻿using NetEFI.Computables;
+﻿using NetEFI.Functions;
 
-namespace NetEFI.Design
+namespace NetEFI.Runtime
 {
     /// <summary>
     /// Provides the execution context and access to the host application's services (netefi.dll).
@@ -18,13 +18,22 @@ namespace NetEFI.Design
         /// Returns null if no function with that name is found.
         /// </summary>
         /// <param name="functionName">The name of the function to call.</param>
-        public abstract IComputable this[ string functionName ] { get; }
+        public abstract CustomFunctionBase this[ string functionName ] { get; }
 
         /// <summary>
         /// Checks if a function with the specified name is defined (registered).
         /// </summary>
         /// <param name="functionName">The name of the function.</param>
         public abstract bool IsDefined( string functionName );
+
+        /// <summary>
+        /// Invokes another registered NetEFI function by its name with the provided arguments.
+        /// </summary>
+        /// <typeparam name="TResult">The expected return type of the function being called.</typeparam>
+        /// <param name="functionName">The name of the function to invoke (e.g., "vbecho").</param>
+        /// <param name="args">The arguments to pass to the function.</param>
+        /// <returns>The result of the invoked function, cast to TResult.</returns>
+        public abstract TResult Invoke<TResult>( string functionName, params object[] args );
 
         /// <summary>
         /// Writes an informational message to the netefi log file.

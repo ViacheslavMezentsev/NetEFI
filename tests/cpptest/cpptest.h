@@ -7,14 +7,13 @@ using namespace System::Reflection;
 using namespace System::Collections::Generic;
 using namespace System::Linq;
 
-using namespace NetEFI::Computables;
-using namespace NetEFI::Design;
+using namespace NetEFI::Runtime;
 using namespace NetEFI::Functions;
 
 namespace cpptest
 {
     [Computable( "cpptest", "cmd", "A utility function to inspect the C++/CLI test assembly." )]
-    public ref class CppTest : public MathcadFunction<String^, String^>
+    public ref class CppTest : public CustomFunction<String^, String^>
     {
     public:
         virtual String^ Execute( String^ cmd, Context^ context ) override
@@ -26,6 +25,7 @@ namespace cpptest
                 if ( cmd->Equals( "info", StringComparison::OrdinalIgnoreCase ) )
                 {
                     auto name = assembly->GetName();
+
                     return String::Format( "{0}: {1}", name->Name, name->Version );
                 }
 
@@ -36,9 +36,10 @@ namespace cpptest
 
                     for each ( Type ^ type in types )
                     {
-                        if ( type->IsPublic && !type->IsAbstract && MathcadFunctionBase::typeid->IsAssignableFrom( type ) )
+                        if ( type->IsPublic && !type->IsAbstract && CustomFunctionBase::typeid->IsAssignableFrom( type ) )
                         {
                             array<Object^>^ attributes = type->GetCustomAttributes( ComputableAttribute::typeid, false );
+
                             if ( attributes->Length > 0 )
                             {
                                 auto attr = safe_cast< ComputableAttribute^ >( attributes[0] );
@@ -46,6 +47,7 @@ namespace cpptest
                             }
                         }
                     }
+
                     return String::Join( ", ", list );
                 }
             }

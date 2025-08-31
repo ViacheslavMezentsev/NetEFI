@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NetEFI.Design
+namespace NetEFI.Functions
 {
     /// <summary>
     /// Stores metadata about a user-defined function.

@@ -2,41 +2,31 @@
 
 namespace NetEFI.Runtime
 {
-    /// <summary>
-    /// A specialized exception for handling errors during function evaluation.
-    /// </summary>
     public class EFIException: Exception
     {
-        /// <summary>
-        /// The error number, corresponding to the error table for the given function.
-        /// </summary>
-        public int ErrNum { get; set; }
+        public int ErrNum { get; internal set; }
+        public int ArgNum { get; }
+        public string ErrorKey { get; }
 
-        /// <summary>
-        /// The 1-based index of the argument that caused the error.
-        /// Is 0 if the error is not associated with a specific argument.
-        /// </summary>
-        public int ArgNum { get; set; }
-
-        public EFIException( int errNum, int argNum )
-            : base( $"Function evaluation error number {errNum} on argument {argNum}." )
+        // Keep the old constructor for internal use by the host if needed
+        internal EFIException( int errNum, int argNum )
         {
             ErrNum = errNum;
             ArgNum = argNum;
         }
 
-        public EFIException( string message, int errNum, int argNum )
-            : base( message )
+        /// <summary>
+        /// Creates an EFIException using a unique error key.
+        /// The host will resolve this key to the correct error index at runtime.
+        /// </summary>
+        public EFIException( string errorKey, int argNum )
         {
-            ErrNum = errNum;
-            ArgNum = argNum;
-        }
+            if ( string.IsNullOrWhiteSpace( errorKey ) )
+                throw new ArgumentException( "Error key cannot be null or empty.", nameof( errorKey ) );
 
-        public EFIException( string message, Exception innerException, int errNum, int argNum )
-            : base( message, innerException )
-        {
-            ErrNum = errNum;
+            ErrorKey = errorKey;
             ArgNum = argNum;
+            ErrNum = -1; // Indicates that the index is not yet resolved
         }
     }
 }

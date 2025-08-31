@@ -1,13 +1,12 @@
 ﻿using System.Numerics;
 
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "cstranspose", "X", "Returns the transpose of matrix X." )]
-    public class CsTranspose: MathcadFunction<Complex[,], Complex[,]>
+    public class CsTranspose: CustomFunction<Complex[,], Complex[,]>
     {
         public override Complex[,] Execute( Complex[,] X, Context context )
         {
@@ -23,6 +22,7 @@ namespace cstest
                     Y[ c, r ] = X[ r, c ];
                 }
             }
+
             return Y;
         }
     }

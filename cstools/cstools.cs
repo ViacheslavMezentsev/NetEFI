@@ -4,16 +4,15 @@ using System.Reflection;
 using System.Collections.Generic;
 
 // Import the new NetEFI namespaces
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstools
 {
     // Describe the function using the Computable attribute.
     [Computable( "cstools", "cmd", "A utility function to inspect .NET assemblies." )]
     // Inherit from the strongly-typed base class.
-    public class CsTools: MathcadFunction<string, string>
+    public class CsTools: CustomFunction<string, string>
     {
         // Implement the simple, strongly-typed Execute method.
         public override string Execute( string cmd, Context context )
@@ -32,7 +31,7 @@ namespace cstools
                 {
                     // Find all function types in this assembly that use the new architecture.
                     var functionTypes = assembly.GetTypes().Where( t =>
-                        t.IsPublic && !t.IsAbstract && typeof( MathcadFunctionBase ).IsAssignableFrom( t ) );
+                        t.IsPublic && !t.IsAbstract && typeof( CustomFunctionBase ).IsAssignableFrom( t ) );
 
                     var names = new List<string>();
 

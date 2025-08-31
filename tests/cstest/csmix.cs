@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Numerics;
 
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "csmix", "m, direction", "Shuffles the elements of a matrix using a pseudo-random generator." )]
-    public class CsMix: MathcadFunction<Complex[,], Complex, Complex[,]>
+    public class CsMix: CustomFunction<Complex[,], Complex, Complex[,]>
     {
         // State for the PRNG
         private uint x = 1, y, z, w;
@@ -39,6 +38,7 @@ namespace cstest
                 // Pre-generate random indices
                 var randomRows = new byte[ N * M ];
                 var randomCols = new byte[ N * M ];
+
                 for ( int k = 0; k < N * M; k++ )
                 {
                     randomRows[ k ] = ( byte ) ( NextByte() % N );
@@ -48,6 +48,7 @@ namespace cstest
                 if ( d == 0 ) // Forward shuffle
                 {
                     int k = 0;
+
                     for ( var n = 0; n < N; n++ )
                     {
                         for ( var i = 0; i < M; i++ )
@@ -62,6 +63,7 @@ namespace cstest
                 else // Backward (un-shuffle) - requires a different logic not implemented here, so we just reverse the loop
                 {
                     int k = N * M - 1;
+
                     for ( var n = N - 1; n >= 0; n-- )
                     {
                         for ( var i = M - 1; i >= 0; i-- )

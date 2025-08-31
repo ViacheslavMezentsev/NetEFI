@@ -21,6 +21,6 @@
 //
 // You can specify all the value or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
-[assembly:AssemblyVersion("0.4.*")];
+[assembly:AssemblyVersion("0.5.*")];
 [assembly:ComVisible(false)];
 [assembly:CLSCompliant(true)];

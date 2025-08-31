@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 1. Import the shared version properties -->
+  <Import Project="..\..\Version.props" />
+
+  <PropertyGroup>
+    <!-- 2. Main project settings -->
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>fstest</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Platforms>x64;x86</Platforms>
+
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    
+    <!-- These properties will now be used to generate the attributes -->
+    <AssemblyTitle>NetEFI F# Example Suite</AssemblyTitle>
+    <Description>A collection of example functions written in F# to demonstrate the NetEFI framework.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 4. Reference the core abstractions library -->
+    <ProjectReference Include="..\..\NetEFI.Abstractions\NetEFI.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 5. Add necessary system references -->
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      6. IMPORTANT: Remove the reference to AssemblyInfo.fs.
+      The only file we need to compile now is our library code.
+    -->
+    <Compile Include="Library.fs" />
+  </ItemGroup>
+
+</Project>

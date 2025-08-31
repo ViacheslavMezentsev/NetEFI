@@ -1,13 +1,12 @@
 ﻿using System.Numerics;
 
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "csenc", "m", "Encodes a grayscale matrix into a vector of packed integers." )]
-    public class CsEncoder: MathcadFunction<Complex[,], Complex[,]>
+    public class CsEncoder: CustomFunction<Complex[,], Complex[,]>
     {
         public override Complex[,] Execute( Complex[,] matrix, Context context )
         {
@@ -32,6 +31,7 @@ namespace cstest
             {
                 // Pack the top 2 bits of 8 consecutive bytes into one 16-bit integer.
                 var value = ( bytes[ 8 * k + 0 ] >> 6 );
+
                 value += ( bytes[ 8 * k + 1 ] >> 6 ) << 2;
                 value += ( bytes[ 8 * k + 2 ] >> 6 ) << 4;
                 value += ( bytes[ 8 * k + 3 ] >> 6 ) << 6;
@@ -39,8 +39,10 @@ namespace cstest
                 value += ( bytes[ 8 * k + 5 ] >> 6 ) << 10;
                 value += ( bytes[ 8 * k + 6 ] >> 6 ) << 12;
                 value += ( bytes[ 8 * k + 7 ] >> 6 ) << 14;
+
                 res[ k, 0 ] = new Complex( value, 0 );
             }
+
             return res;
         }
     }

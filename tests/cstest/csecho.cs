@@ -1,27 +1,26 @@
-﻿using NetEFI.Computables;
-using NetEFI.Design;
-using NetEFI.Functions;
+﻿using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "csecho", "s", "Returns the input string." )]
-    public class CsEcho: MathcadFunction<string, string>
+    public class CsEcho: CustomFunction<string, string>
     {
         public override string Execute( string s, Context context )
         {
             // This demonstrates how to call another function registered with NetEFI.
             if ( context.IsDefined( "vbecho" ) )
             {
-                // Create arguments for the target function
-                var args = new object[] { s };
-                object result;
+                // Use the strongly-typed Invoke method.
+                context.LogInfo( "csecho is forwarding the call to vbecho." );
 
-                // Call vbecho and return its result
-                context[ "vbecho" ].NumericEvaluation( args, out result, context );
-                return ( string ) result;
+                return context.Invoke<string>( "vbecho", s );
             }
 
-            return s; // Fallback if vbecho is not available
+            // Fallback if vbecho is not available
+            context.LogInfo( "vbecho not found, csecho is returning the value directly." );
+
+            return s;
         }
     }
 }

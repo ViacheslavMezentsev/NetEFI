@@ -1,13 +1,12 @@
 ﻿using System.Numerics;
-using System.Collections.Generic;
-using NetEFI.Computables;
-using NetEFI.Design;
+
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "cstable", "seed", "Generates a frequency table of pseudo-random numbers." )]
-    public class CsTable: MathcadFunction<Complex, Complex[,]>
+    public class CsTable: CustomFunction<Complex, Complex[,]>
     {
         // State for the PRNG
         private uint x = 1, y, z, w;
@@ -18,6 +17,7 @@ namespace cstest
             uint t = x ^ ( x << 11 );
             x = y; y = z; z = w;
             w = w ^ ( w >> 19 ) ^ ( t ^ ( t >> 8 ) );
+
             return ( byte ) ( w & 0xFF );
         }
 
@@ -34,6 +34,7 @@ namespace cstest
 
             // Generate frequency counts
             var counts = new int[ numClasses ];
+
             for ( int k = 0; k < dataSize; k++ )
             {
                 // Generate a 16-bit random number
@@ -43,6 +44,7 @@ namespace cstest
 
             // Prepare the result matrix
             var res = new Complex[ numClasses, 1 ];
+
             for ( int k = 0; k < numClasses; k++ )
             {
                 res[ k, 0 ] = new Complex( counts[ k ], 0 );

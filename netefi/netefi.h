@@ -8,12 +8,12 @@ namespace NetEFI
     {
     public:
         String ^ Path;
-        List < IComputable ^ > ^ Functions;
+        List < CustomFunctionBase^ > ^ Functions;
 
         AssemblyInfo( String ^ path )
         {
             Path = path;
-            Functions = gcnew List< IComputable^ >();
+            Functions = gcnew List< CustomFunctionBase^ >();
         }
     };
 }

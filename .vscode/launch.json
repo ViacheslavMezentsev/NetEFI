@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach SMath Solver",
+            "type": "clr",
+            "request": "attach",
+            "processName": "Solver.exe"
+        },
+        {
+            // Эта конфигурация будет вручную присоединять отладчик к уже запущенному процессу SMath.
+            // Полезна для быстрой отладки, если SMath Studio уже открыта.
+            "name": "Присоединиться к SMath Studio",
+            "type": "coreclr",
+            "request": "attach",
+            // Эта команда откроет список всех запущенных процессов, чтобы вы могли выбрать нужный.
+            "processId": "${command:pickProcess}"
+        },
+        {
+            // Эта конфигурация будет запускать SMath Studio, но НЕ будет автоматически присоединять отладчик.
+            // Она нам нужна как часть составной конфигурации ниже.
+            "name": "Запустить SMath Studio",
+            "type": "cppvsdbg", // Используем этот тип, так как он умеет просто запускать внешние .exe
+            "request": "launch",
+            "program": "C:\\Program Files (x86)\\SMath Studio\\Solver.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "internalConsole"
+        }
+    ],
+    "compounds": [
+        {
+            // Это — главная, составная конфигурация. Она объединяет шаги в один.
+            "name": "Отладка XYPlotRegion (Запуск и Присоединение)",
+            "configurations": [
+                "Запустить SMath Studio",
+                "Присоединиться к SMath Studio"
+            ],
+            // Перед запуском этой конфигурации будет выполнена задача сборки из вашего tasks.json.
+            "preLaunchTask": "Build Debug"
+        }
+    ]
+}

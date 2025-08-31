@@ -24,7 +24,7 @@ using namespace NetEFI;
 extern CMathcadEfi MathcadEfi;
 
 
-LRESULT ConvertInputs( IComputable ^ func, PVOID items[], array < Object ^ > ^ % args )
+LRESULT ConvertInputs( CustomFunctionBase^ func, PVOID items[], array < Object ^ > ^ % args )
 {
     int count = func->Info->ArgTypes->GetLength(0);
 
@@ -69,27 +69,48 @@ LRESULT ConvertInputs( IComputable ^ func, PVOID items[], array < Object ^ > ^ %
 }
 
 
-LRESULT Evaluate( IComputable^ func, array<Object^>^ args, Object^% lvalue )
+LRESULT Evaluate( CustomFunctionBase^ func, array<Object^>^ args, Object^% lvalue )
 {
-    // The main try-catch now only handles unexpected, critical exceptions.
     try
     {
-        ContextImpl^ context = gcnew ContextImpl();
+        auto context = gcnew ContextImpl();
 
-        // NumericEvaluation will now never throw an EFIException.
-        // It will either return a normal value or an ErrorResult object.
         if ( !func->NumericEvaluation( args, lvalue, context ) )
         {
-            // This path is now less likely, but we keep it for robustness.
             throw gcnew System::Exception( String::Format( "'{0}': numeric evaluation returned false", func->Info->Name ) );
         }
 
-        // NEW LOGIC: Check if the returned object is our error marker.
-        auto error = dynamic_cast< ErrorResult^ >( lvalue );
+        auto errorResult = dynamic_cast< ErrorResult^ >( lvalue );
 
-        if ( error != nullptr )
+        if ( errorResult != nullptr )
         {
-            // It is an error! Now we perform the offset calculation.
+            // It is a custom error. First, find the 1-based index of the error key.
+            auto funcobj = Manager::Assemblies[ MathcadEfi.AssemblyId ]->Functions[ MathcadEfi.FunctionId ];
+
+            array<Object^>^ errorAttributes = funcobj->GetType()->GetCustomAttributes( ErrorAttribute::typeid, false );
+
+            int errorIndex = -1;
+
+            for ( int i = 0; i < errorAttributes->Length; i++ )
+            {
+                auto attr = safe_cast< ErrorAttribute^ >( errorAttributes[i] );
+
+                if ( attr->Key->Equals( errorResult->ErrorKey, StringComparison::Ordinal ) )
+                {
+                    // Error indices are 1-based
+                    errorIndex = i + 1;
+                    break;
+                }
+            }
+
+            // If no attribute with the specified key was found, it's a critical error.
+            if ( errorIndex == -1 )
+            {
+                throw gcnew System::Exception( String::Format( "'{0}': Function threw a custom error with key '{1}', but no [Error] attribute with that key was found.",
+                    func->Info->Name, errorResult->ErrorKey ) );
+            }
+
+            // Now, calculate the total error offset from previous assemblies and functions.
             int offset = 0;
 
             for ( int k = 0; k <= MathcadEfi.AssemblyId; k++ )
@@ -102,62 +123,42 @@ LRESULT Evaluate( IComputable^ func, array<Object^>^ args, Object^% lvalue )
                 {
                     if ( k == MathcadEfi.AssemblyId && n >= MathcadEfi.FunctionId ) break;
 
-                    auto funcobj = assemblyInfo->Functions[n];
-                    auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
-                    if ( errorsFieldInfo == nullptr ) continue;
+                    // Instead of a static field, we now count the defined [Error] attributes.
+                    auto previousFunc = assemblyInfo->Functions[n];
 
-                    try
-                    {
-                        auto errors = ( array<String^>^ )errorsFieldInfo->GetValue( nullptr );
-                        if ( errors != nullptr ) offset += errors->GetLength( 0 );
-                    }
-                    catch ( ... ) {}
+                    offset += previousFunc->GetType()->GetCustomAttributes( ErrorAttribute::typeid, false )->Length;
                 }
             }
 
-		    // Get the error message from the function.
-            auto assemblyInfo = Manager::Assemblies[ MathcadEfi.AssemblyId ];
+            // Correct the argument index if it's out of bounds.
+            int argCount = func->Info->ArgTypes->GetLength(0);
+            int argIndex = errorResult->ArgumentIndex;
 
-            if ( MathcadEfi.FunctionId < 0 || MathcadEfi.FunctionId >= assemblyInfo->Functions->Count )
-                throw gcnew System::Exception( String::Format( "'{0}': function id {1} is out of range", func->Info->Name, MathcadEfi.FunctionId ) );
+            if ( argIndex < 0 || argIndex > argCount )
+            {
+                argIndex = 0;
+            }
 
-            auto funcobj = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
-
-            if ( funcobj == nullptr ) throw gcnew System::Exception( String::Format( "'{0}': function object is null", func->Info->Name ) );
-
-            auto errorsFieldInfo = funcobj->GetType()->GetField( "Errors", BindingFlags::GetField | BindingFlags::Static | BindingFlags::Public );
-
-            if ( errorsFieldInfo == nullptr )
-                throw gcnew System::Exception( String::Format( "'{0}': can't find error table", func->Info->Name ) );
-
-            auto errors = ( array < String ^ > ^ ) errorsFieldInfo->GetValue( nullptr );
-
-            if ( errors == nullptr )
-                throw gcnew System::Exception( String::Format( "'{0}': error table is null", func->Info->Name ) );
-
-            if ( error->ErrorCode <= 0 || error->ErrorCode > errors->GetLength(0) )
-                throw gcnew System::Exception( String::Format( "'{0}': can't find error message ({1})", func->Info->Name, error->ErrorCode ) );
-
-            int count = func->Info->ArgTypes->GetLength(0);
-
-            if ( error->ArgumentIndex < 0 || error->ArgumentIndex > count ) error->ArgumentIndex = 0;
-
-            // See Mathcad Developer Reference for the details.
-            return MAKELRESULT( offset + error->ErrorCode, error->ArgumentIndex );
+            return MAKELRESULT( offset + errorIndex, argIndex );
         }
     }
-    catch ( Exception^ ex ) // This now catches only CRITICAL, unexpected exceptions.
+    catch ( Exception^ ex )
     {
-        Manager::LogError( "An unhandled exception occurred in Evaluate for function '{0}'.", func->Info->Name );
+        // Get function name safely, even if 'func' is null
+        String^ funcName = ( func != nullptr ) ? func->Info->Name : "UNKNOWN";
+
+        Manager::LogError( "An unhandled exception occurred in Evaluate for function '{0}'.", funcName );
         Manager::LogError( ex->ToString() );
+
         return E_FAIL;
     }
 
-    return S_OK; // Normal, successful execution.
+    // Normal, successful execution.
+    return S_OK;
 }
 
 
-LRESULT ConvertOutput( IComputable ^ func, Object ^ lvalue, void * result )
+LRESULT ConvertOutput( CustomFunctionBase^ func, Object ^ lvalue, void * result )
 {
     // Convert the result.
     Type ^ type = lvalue->GetType();
@@ -240,7 +241,7 @@ LRESULT ConvertOutput( IComputable ^ func, Object ^ lvalue, void * result )
 
 
 // Helper function to safely clean up the return value pointer in case of an error.
-void CleanupReturnValueOnError( IComputable^ func, PVOID returnValue )
+void CleanupReturnValueOnError( CustomFunctionBase^ func, PVOID returnValue )
 {
     // Safety checks
     if ( func == nullptr || returnValue == nullptr )
@@ -274,7 +275,7 @@ void CleanupReturnValueOnError( IComputable^ func, PVOID returnValue )
 // General function.
 LRESULT UserFunction( PVOID items[] )
 {
-    IComputable^ func = nullptr;
+    CustomFunctionBase^ func = nullptr;
 
     try
     {
@@ -285,7 +286,7 @@ LRESULT UserFunction( PVOID items[] )
             throw gcnew System::Exception( "FunctionId is out of range" );
 
 		// Get the function object.
-        func = ( IComputable ^ ) assemblyInfo->Functions[ MathcadEfi.FunctionId ];
+        func = assemblyInfo->Functions[ MathcadEfi.FunctionId ];
 
         if ( func == nullptr ) throw gcnew System::Exception( "Function object is null" );
 

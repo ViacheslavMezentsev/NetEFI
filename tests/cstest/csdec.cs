@@ -1,13 +1,12 @@
 ﻿using System.Numerics;
 
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstest
 {
     [Computable( "csdec", "m", "Decodes a vector of packed integers into a 2-bit grayscale matrix." )]
-    public class CsDecoder: MathcadFunction<Complex[,], Complex[,]>
+    public class CsDecoder: CustomFunction<Complex[,], Complex[,]>
     {
         public override Complex[,] Execute( Complex[,] m, Context context )
         {
@@ -26,6 +25,7 @@ namespace cstest
                 for ( var i = 0; i < 32; i++ )
                 {
                     var value = bytes[ n * 32 + i ];
+
                     // Unpack each 16-bit integer into 8 2-bit values, scaled up to 0-192 range.
                     res[ n, 8 * i + 0 ] = new Complex( ( value & 0x0003 ) << 6, 0 );
                     res[ n, 8 * i + 1 ] = new Complex( ( ( value & 0x000C ) >> 2 ) << 6, 0 );
@@ -37,6 +37,7 @@ namespace cstest
                     res[ n, 8 * i + 7 ] = new Complex( ( ( value & 0xC000 ) >> 14 ) << 6, 0 );
                 }
             }
+
             return res;
         }
     }

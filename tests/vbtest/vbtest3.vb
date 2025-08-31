@@ -1,13 +1,12 @@
 ﻿Imports System.Numerics
-Imports NetEFI.Computables
-Imports NetEFI.Design
 Imports NetEFI.Functions
+Imports NetEFI.Runtime
 
 Namespace VbTest
 
     <Computable("vbtest3", "n, m", "Returns an n x m matrix of complex numbers.")>
     Public Class VbTest3
-        Inherits MathcadFunction(Of Complex, Complex, Complex(,))
+        Inherits CustomFunction(Of Complex, Complex, Complex(,))
 
         Public Overrides Function Execute(nComplex As Complex, mComplex As Complex, context As Context) As Complex(,)
             Try

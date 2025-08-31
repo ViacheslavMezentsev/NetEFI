@@ -5,9 +5,8 @@ Imports System.Drawing.Imaging
 Imports System.Runtime.InteropServices
 
 ' Import the new NetEFI namespaces
-Imports NetEFI.Computables
-Imports NetEFI.Design
 Imports NetEFI.Functions
+Imports NetEFI.Runtime
 
 Namespace capture
 
@@ -16,7 +15,7 @@ Namespace capture
     '    It takes a Complex (for deviceId) and returns a Complex(,) (the image matrix).
     <Computable("capture", "deviceId", "Takes a snapshot from the specified USB webcam.")>
     Public Class Capture
-        Inherits MathcadFunction(Of Complex, Complex(,))
+        Inherits CustomFunction(Of Complex, Complex(,))
 
         ' A field to store the captured image between calls
         Public img As Bitmap = Nothing

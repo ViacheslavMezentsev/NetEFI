@@ -2,9 +2,8 @@
 using System.Linq;
 using System.Numerics;
 
-using NetEFI.Computables;
-using NetEFI.Design;
 using NetEFI.Functions;
+using NetEFI.Runtime;
 
 namespace cstools
 {
@@ -49,7 +48,7 @@ namespace cstools
     [Computable( "csimplot2d", "dx, dy, xmin, ymin, zvalues", "Generates contour plot data for a 2D surface using the Marching Squares algorithm." )]
     // 2. Inherit from a version of MathcadFunction with 5 arguments.
     //    We will need to create this new base class first.
-    public class csimplot2d: MathcadFunction<Complex, Complex, Complex, Complex, Complex[,], Complex[,]>
+    public class csimplot2d: CustomFunction<Complex, Complex, Complex, Complex, Complex[,], Complex[,]>
     {
 
         #region Private fields

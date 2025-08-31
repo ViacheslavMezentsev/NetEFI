@@ -1,13 +1,12 @@
 ﻿Imports System.IO
-Imports NetEFI.Computables
-Imports NetEFI.Design
 Imports NetEFI.Functions
+Imports NetEFI.Runtime
 
 Namespace VbTest
 
     <Computable("vbrfile", "filePath", "Returns the content of a specified text file.")>
     Public Class VbReadFile
-        Inherits MathcadFunction(Of String, String)
+        Inherits CustomFunction(Of String, String)
 
         Public Overrides Function Execute(filePath As String, context As Context) As String
             Try
