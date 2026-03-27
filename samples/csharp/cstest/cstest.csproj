@@ -90,7 +90,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\NetEFI.Abstractions\NetEFI.Abstractions.csproj">
+    <ProjectReference Include="..\..\..\src\NetEFI.Abstractions\NetEFI.Abstractions.csproj">
       <Project>{85220e1e-e987-4525-9ef9-f22528be6413}</Project>
       <Name>NetEFI.Abstractions</Name>
     </ProjectReference>

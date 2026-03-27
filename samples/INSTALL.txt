@@ -1,0 +1,38 @@
+NetEFI Framework — Примеры пользовательских функций
+====================================================
+
+Эти DLL демонстрируют возможности NetEFI Framework и готовы
+к немедленному использованию в Mathcad.
+
+УСТАНОВКА
+---------
+
+1. Скопируйте ВСЕ файлы из этого архива в папку Custom Functions:
+
+   Mathcad Prime:
+     %ProgramFiles%\PTC\Mathcad Prime X.X.X.X\Custom Functions\
+
+   Mathcad 15:
+     %ProgramFiles%\Mathcad\Mathcad 15\userefi\
+
+2. Перезапустите Mathcad.
+
+3. Проверьте в рабочем листе:
+     cs_sum(1, 2)     → 3   (C#)
+     vb_product(2, 3) → 6   (VB.NET)
+     fs_power(2, 8)   → 256 (F#)
+     cpp_diff(5, 3)   → 2   (C++/CLI)
+
+СОДЕРЖИМОЕ
+----------
+  NetEFI.dll               — C++/CLI хост (обязателен)
+  NetEFI.Abstractions.dll  — managed API (обязателен)
+  cstest.dll               — примеры функций на C#
+  vbtest.dll               — примеры функций на VB.NET
+  fstest.dll               — примеры функций на F#
+  FSharp.Core.dll          — рантайм F# (нужен для fstest.dll)
+  cpptest.dll              — примеры функций на C++/CLI
+
+ДОКУМЕНТАЦИЯ
+------------
+  https://github.com/ViacheslavMezentsev/NetEFI

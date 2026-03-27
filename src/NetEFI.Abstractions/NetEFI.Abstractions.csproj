@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\Version.props" />
+  <Import Project="..\..\build\Version.props" />
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>

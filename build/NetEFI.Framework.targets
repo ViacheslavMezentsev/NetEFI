@@ -1,0 +1,17 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyNetEfiHostAfterBuild" AfterTargets="Build">
+    <PropertyGroup>
+      <NetEfiPackageRoot>$(MSBuildThisFileDirectory)..\..\</NetEfiPackageRoot>
+    </PropertyGroup>
+    <PropertyGroup>
+      <NetEfiSourcePath Condition=" '$(Platform.Contains(`x64`))' == 'true' ">$(NetEfiPackageRoot)runtimes\win-x64\native\NetEFI.dll</NetEfiSourcePath>
+      <NetEfiSourcePath Condition=" '$(Platform.Contains(`x64`))' != 'true' ">$(NetEfiPackageRoot)runtimes\win-x86\native\NetEFI.dll</NetEfiSourcePath>
+    </PropertyGroup>
+    <Message Text="Copying NetEFI host: $(NetEfiSourcePath) to $(TargetDir)" Importance="high" />
+    <Copy
+        SourceFiles="$(NetEfiSourcePath)"
+        DestinationFolder="$(TargetDir)"
+        SkipUnchangedFiles="true"
+        />
+  </Target>
+</Project>

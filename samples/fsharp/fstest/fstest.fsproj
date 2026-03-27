@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- 1. Import the shared version properties -->
-  <Import Project="..\..\Version.props" />
+  <Import Project="..\..\..\build\Version.props" />
 
   <PropertyGroup>
     <!-- 2. Main project settings -->
@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <!-- 4. Reference the core abstractions library -->
-    <ProjectReference Include="..\..\NetEFI.Abstractions\NetEFI.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\NetEFI.Abstractions\NetEFI.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

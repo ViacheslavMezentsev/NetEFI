@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>NetEFI.Framework</id>
+    <version>$version$</version>
+    <!--
+      Если собирать локально вручную:
+        nuget pack build\NetEFI.Framework.nuspec ^
+          -Properties version=0.5.1-test ^
+          -OutputDirectory build
+    -->
+    <title>NetEFI Framework for Mathcad</title>
+    <authors>Viacheslav N. Mezentsev</authors>
+    <readme>docs\readme.md</readme>
+    <description>
+A powerful framework that allows creating user-defined functions for Mathcad 15 and Mathcad Prime using any .NET language (C#, VB.NET, F#, C++/CLI).
+This package provides a simple, attribute-based API that hides the complexity of the underlying C++/CLI host. Developers can write clean, strongly-typed functions by inheriting from a generic base class, focusing purely on their logic without boilerplate code.
+    </description>
+    <projectUrl>https://github.com/ViacheslavMezentsev/NetEFI</projectUrl>
+    <license type="expression">MIT</license>
+    <repository type="git" url="https://github.com/ViacheslavMezentsev/NetEFI.git" />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>mathcad mathcad-prime efi net csharp vbnet fsharp cppcli plugin framework custom-functions userefi</tags>
+
+    <releaseNotes>See https://github.com/ViacheslavMezentsev/NetEFI/releases</releaseNotes>
+
+    <dependencies>
+      <group targetFramework=".NETFramework4.8" />
+    </dependencies>
+  </metadata>
+
+  <files>
+    <!--
+      Пути относительно этого .nuspec файла (build/).
+      Структура: build/ → ../src/...
+    -->
+
+    <!-- Managed API library -->
+    <file src="..\src\NetEFI.Abstractions\bin\Release\net48\NetEFI.Abstractions.dll"
+          target="lib\net48\" />
+
+    <!-- MSBuild targets (автокопирование netefi.dll после сборки) -->
+    <file src="NetEFI.Framework.targets"
+          target="build\net48\NetEFI.Framework.targets" />
+
+    <!-- C++/CLI host для Mathcad Prime (x64) -->
+    <file src="..\src\NetEFI\x64\Release\NetEFI.dll"
+          target="runtimes\win-x64\native\" />
+
+    <!-- C++/CLI host для Mathcad 15 (x86) -->
+    <file src="..\src\NetEFI\x86\Release\NetEFI.dll"
+          target="runtimes\win-x86\native\" />
+
+    <!-- Документация для пакета -->
+    <file src="..\README.md"
+          target="docs\readme.md" />
+  </files>
+</package>

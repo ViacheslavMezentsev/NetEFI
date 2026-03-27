@@ -1,0 +1,283 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'   # v0.5.0, v1.0.0, etc.
+
+permissions:
+  contents: write  # нужно для создания GitHub Release
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: сборка основного фреймворка (x86 + x64)
+  # ─────────────────────────────────────────────────────────────
+  build-framework:
+    name: Build Framework (${{ matrix.platform }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x64, x86]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Restore NuGet packages
+        run: nuget restore NetEFI.sln
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build NetEFI host (${{ matrix.platform }})
+        run: >
+          msbuild src/NetEFI/NetEFI.vcxproj
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /p:Version=${{ steps.version.outputs.version }}
+          /m /v:minimal
+
+      - name: Build NetEFI.Abstractions
+        if: matrix.platform == 'x64'
+        run: >
+          msbuild src/NetEFI.Abstractions/NetEFI.Abstractions.csproj
+          /p:Configuration=Release
+          /p:Version=${{ steps.version.outputs.version }}
+          /m /v:minimal
+
+      - name: Upload NetEFI.dll (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: netefi-host-${{ matrix.platform }}
+          path: src/NetEFI/${{ matrix.platform }}/Release/NetEFI.dll
+          if-no-files-found: error
+
+      - name: Upload NetEFI.Abstractions.dll
+        if: matrix.platform == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: netefi-abstractions
+          path: src/NetEFI.Abstractions/bin/Release/net48/NetEFI.Abstractions.dll
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: сборка примеров (x86 + x64)
+  # ─────────────────────────────────────────────────────────────
+  build-samples:
+    name: Build Samples (${{ matrix.platform }})
+    runs-on: windows-latest
+    needs: build-framework
+    strategy:
+      matrix:
+        platform: [x64, x86]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Download NetEFI.dll (${{ matrix.platform }})
+        uses: actions/download-artifact@v4
+        with:
+          name: netefi-host-${{ matrix.platform }}
+          path: _artifacts/netefi-host-${{ matrix.platform }}
+
+      - name: Download NetEFI.Abstractions.dll
+        uses: actions/download-artifact@v4
+        with:
+          name: netefi-abstractions
+          path: _artifacts/netefi-abstractions
+
+      - name: Restore NuGet packages (samples)
+        run: nuget restore samples/samples.sln
+
+      - name: Build all samples (${{ matrix.platform }})
+        run: >
+          msbuild samples/samples.sln
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /m /v:minimal
+
+      # ── Собираем staging-папку для ZIP ──────────────────────
+      - name: Prepare staging directory
+        shell: pwsh
+        run: |
+          $platform = "${{ matrix.platform }}"
+          $stage = "_stage/$platform"
+          New-Item -ItemType Directory -Force $stage
+
+          # NetEFI host
+          Copy-Item "_artifacts/netefi-host-$platform/NetEFI.dll"       $stage
+          Copy-Item "_artifacts/netefi-abstractions/NetEFI.Abstractions.dll" $stage
+
+          # C# sample
+          Copy-Item "samples/csharp/cstest/bin/$platform/Release/cstest.dll" $stage -ErrorAction SilentlyContinue
+          Copy-Item "samples/csharp/cstools/bin/$platform/Release/cstools.dll" $stage -ErrorAction SilentlyContinue
+
+          # VB.NET sample
+          Copy-Item "samples/vbnet/vbtest/bin/$platform/Release/vbtest.dll" $stage -ErrorAction SilentlyContinue
+
+          # F# sample (net48 output path)
+          $fsOutDir = "samples/fsharp/fstest/bin/$platform/Release/net48"
+          if (Test-Path $fsOutDir) {
+            Copy-Item "$fsOutDir/fstest.dll"      $stage -ErrorAction SilentlyContinue
+            Copy-Item "$fsOutDir/FSharp.Core.dll" $stage -ErrorAction SilentlyContinue
+          }
+
+          # C++/CLI sample
+          Copy-Item "samples/cppcli/cpptest/$platform/Release/cpptest.dll" $stage -ErrorAction SilentlyContinue
+
+          # Install instructions
+          Copy-Item "samples/INSTALL.txt" $stage -ErrorAction SilentlyContinue
+
+          Write-Host "Staging contents:"
+          Get-ChildItem $stage
+
+      - name: Upload staging (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: samples-staged-${{ matrix.platform }}
+          path: _stage/${{ matrix.platform }}/
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: упаковка NuGet и публикация
+  # ─────────────────────────────────────────────────────────────
+  pack-and-publish:
+    name: Pack & Publish NuGet
+    runs-on: windows-latest
+    needs: build-framework
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download NetEFI.dll (x64)
+        uses: actions/download-artifact@v4
+        with:
+          name: netefi-host-x64
+          path: src/NetEFI/x64/Release
+
+      - name: Download NetEFI.dll (x86)
+        uses: actions/download-artifact@v4
+        with:
+          name: netefi-host-x86
+          path: src/NetEFI/x86/Release
+
+      - name: Download NetEFI.Abstractions.dll
+        uses: actions/download-artifact@v4
+        with:
+          name: netefi-abstractions
+          path: src/NetEFI.Abstractions/bin/Release/net48
+
+      - name: Pack NuGet package
+        run: >
+          nuget pack build/NetEFI.Framework.nuspec
+          -Properties version=${{ steps.version.outputs.version }}
+          -OutputDirectory _nupkg
+          -NonInteractive
+
+      - name: Upload .nupkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: _nupkg/*.nupkg
+          if-no-files-found: error
+
+      - name: Publish to NuGet.org
+        run: >
+          nuget push _nupkg/*.nupkg
+          -ApiKey ${{ secrets.NUGET_API_KEY }}
+          -Source https://api.nuget.org/v3/index.json
+          -NonInteractive
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 4: создание GitHub Release
+  # ─────────────────────────────────────────────────────────────
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-samples, pack-and-publish]
+
+    steps:
+      - name: Checkout (нужен для CHANGELOG)
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _all-artifacts
+
+      - name: Build ZIP archives
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          for ARCH in x64 x86; do
+            SRC="_all-artifacts/samples-staged-${ARCH}"
+            if [ -d "$SRC" ]; then
+              zip -j "netefi-v${VERSION}-samples-${ARCH}.zip" "$SRC"/*
+              echo "Created netefi-v${VERSION}-samples-${ARCH}.zip"
+            else
+              echo "WARNING: staging dir $SRC not found, skipping ${ARCH} zip"
+            fi
+          done
+
+          # Копируем .nupkg
+          cp _all-artifacts/nupkg/*.nupkg . 2>/dev/null || true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "NetEFI Framework v${{ steps.version.outputs.version }}"
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}  # v1.0.0-beta → prerelease
+          generate_release_notes: true   # авто-changelog из коммитов
+          files: |
+            netefi-v${{ steps.version.outputs.version }}-samples-x64.zip
+            netefi-v${{ steps.version.outputs.version }}-samples-x86.zip
+            NetEFI.Framework.${{ steps.version.outputs.version }}.nupkg
+          body: |
+            ## Установка
+
+            ### Через NuGet (рекомендуется)
+            ```
+            Install-Package NetEFI.Framework -Version ${{ steps.version.outputs.version }}
+            ```
+
+            ### Готовые примеры
+            Скачайте ZIP для вашей версии Mathcad:
+            - **`netefi-v${{ steps.version.outputs.version }}-samples-x64.zip`** — Mathcad Prime (64-бит)
+            - **`netefi-v${{ steps.version.outputs.version }}-samples-x86.zip`** — Mathcad 15 (32-бит)
+
+            Распакуйте все файлы в папку Custom Functions вашей установки Mathcad.

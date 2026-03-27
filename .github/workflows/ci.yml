@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x64, x86]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Restore NuGet packages
+        run: nuget restore NetEFI.sln
+
+      - name: Build solution
+        run: >
+          msbuild NetEFI.sln
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /m
+          /v:minimal
+
+      - name: Upload NetEFI.dll (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: netefi-host-${{ matrix.platform }}
+          path: src/NetEFI/${{ matrix.platform }}/Release/NetEFI.dll
+          if-no-files-found: error
+
+      - name: Upload NetEFI.Abstractions.dll
+        if: matrix.platform == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: netefi-abstractions
+          path: src/NetEFI.Abstractions/bin/Release/net48/NetEFI.Abstractions.dll
+          if-no-files-found: error
