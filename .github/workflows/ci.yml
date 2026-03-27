@@ -34,7 +34,7 @@ jobs:
 
       - name: Build solution
         run: >
-          msbuild NetEFI.sln
+          msbuild src/NetEFI.sln
           /p:Configuration=Release
           /p:Platform=${{ matrix.platform }}
           /m
