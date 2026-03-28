@@ -128,7 +128,7 @@ jobs:
               if (Test-Path $f) { Copy-Item $f $dir }
               else { Write-Warning "Not found: $f" }
             }
-            $zip = "netefi-v$ver-samples-$lang-$plat.zip"
+            $zip = "netefi-$ver-samples-$lang-$plat.zip"
             Compress-Archive -Path "$dir\*" -DestinationPath $zip -Force
             Write-Host "Created: $zip"
           }
@@ -159,7 +159,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zips-${{ matrix.platform }}
-          path: netefi-v*.zip
+          path: netefi-*.zip
           if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
@@ -218,13 +218,13 @@ jobs:
 #          -Source https://api.nuget.org/v3/index.json
 #          -SkipDuplicate
 #          -NonInteractive
-#
-#      - name: Upload .nupkg
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: nupkg
-#          path: _nupkg/*.nupkg
-#          if-no-files-found: error
+
+      - name: Upload .nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: _nupkg/*.nupkg
+          if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
   # Job 4: создание GitHub Release
