@@ -3,6 +3,9 @@
 [![NuGet](https://img.shields.io/nuget/v/NetEFI.Framework?label=NuGet)](https://www.nuget.org/packages/NetEFI.Framework/)
 [![Nuget](https://img.shields.io/nuget/dt/NetEFI.Framework)](https://www.nuget.org/packages/NetEFI.Framework/)
 [![GitHub](https://img.shields.io/github/license/ViacheslavMezentsev/NetEFI)](https://github.com/ViacheslavMezentsev/NetEFI/blob/master/LICENSE)
+[![CI](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/ci.yml/badge.svg)](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/ci.yml)
+[![Release](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/release.yml/badge.svg)](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/release.yml)
+[![Built with Claude](https://img.shields.io/badge/Built%20with-Claude-blueviolet?logo=anthropic)](https://claude.ai)
 
 Фреймворк для создания пользовательских функций **Mathcad 15** и **Mathcad Prime** на любом .NET-языке (C#, VB.NET, F#, C++/CLI). Избавляет от необходимости писать код на C++: простой API на основе атрибутов позволяет сосредоточиться на логике функции в привычной строго-типизированной управляемой среде.
 
