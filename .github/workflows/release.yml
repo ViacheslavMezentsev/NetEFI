@@ -105,9 +105,6 @@ jobs:
           /p:Platform=${{ matrix.platform }}
           /m /v:minimal
 
-      # Создаём ZIP-архивы прямо здесь — по одному на язык.
-      # INSTALL.txt хранится в репозитории (samples/INSTALL.txt),
-      # никакой генерации в workflow не нужно.
       - name: Package archives
         shell: pwsh
         run: |
@@ -116,16 +113,30 @@ jobs:
           $netefi = "_host/$plat/NetEFI.dll"
           $abs    = "_host/abstractions/NetEFI.Abstractions.dll"
           $inst   = "samples/INSTALL.txt"
+          $ws     = "samples/worksheets"
+
+          # Документы Mathcad, общие для всех архивов
+          $sheetsCommon = @(
+            "$ws/netefi-mp6.mcdx",
+            "$ws/netefi-mp11.mcdx",
+            "$ws/netefi-mc15.xmcd"
+          )
 
           function New-Archive {
-            param($lang, [string[]]$extra)
-            $dir = "_zip/$lang"
-            New-Item -ItemType Directory -Force $dir | Out-Null
+            param($lang, [string[]]$dlls, [string[]]$sheets)
+            $dir  = "_zip/$lang"
+            $wdir = "$dir/worksheets"
+            New-Item -ItemType Directory -Force $dir  | Out-Null
+            New-Item -ItemType Directory -Force $wdir | Out-Null
             Copy-Item $netefi $dir
             Copy-Item $abs    $dir
             Copy-Item $inst   $dir
-            foreach ($f in $extra) {
+            foreach ($f in $dlls) {
               if (Test-Path $f) { Copy-Item $f $dir }
+              else { Write-Warning "Not found: $f" }
+            }
+            foreach ($f in $sheets) {
+              if (Test-Path $f) { Copy-Item $f $wdir }
               else { Write-Warning "Not found: $f" }
             }
             $zip = "netefi-$ver-samples-$lang-$plat.zip"
@@ -133,27 +144,35 @@ jobs:
             Write-Host "Created: $zip"
           }
 
-          # C++/CLI: платформа в пути есть (vcxproj → $plat\Release\)
-          New-Archive 'cppcli' @(
-            "samples/cppcli/cpptest/$plat/Release/cpptest.dll"
-          )
+          # C++/CLI — только netefi-документы
+          New-Archive 'cppcli' `
+            @("samples/cppcli/cpptest/$plat/Release/cpptest.dll") `
+            $sheetsCommon
 
-          # C#: платформы в пути нет (csproj → bin\Release\)
-          New-Archive 'csharp' @(
-            "samples/csharp/cstest/bin/Release/cstest.dll",
-            "samples/csharp/cstools/bin/Release/cstools.dll"
-          )
+          # C# — netefi-документы + документы cstools
+          New-Archive 'csharp' `
+            @("samples/csharp/cstest/bin/Release/cstest.dll",
+              "samples/csharp/cstools/bin/Release/cstools.dll") `
+            ($sheetsCommon + @(
+              "$ws/csharp-cstools-mp6.mcdx",
+              "$ws/csharp-cstools-mp11.mcdx",
+              "$ws/csharp-cstools-mc15.xmcd"
+            ))
 
-          # F#: платформа есть (SDK-style → bin\$plat\Release\net48\)
-          New-Archive 'fsharp' @(
-            "samples/fsharp/fstest/bin/$plat/Release/net48/fstest.dll",
-            "samples/fsharp/fstest/bin/$plat/Release/net48/FSharp.Core.dll"
-          )
+          # F# — только netefi-документы (нет специфичных)
+          New-Archive 'fsharp' `
+            @("samples/fsharp/fstest/bin/$plat/Release/net48/fstest.dll",
+              "samples/fsharp/fstest/bin/$plat/Release/net48/FSharp.Core.dll") `
+            $sheetsCommon
 
-          # VB.NET: платформы в пути нет (vbproj → bin\Release\)
-          New-Archive 'vbnet' @(
-            "samples/vbnet/vbtest/bin/Release/vbtest.dll"
-          )
+          # VB.NET — netefi-документы + документы capture
+          New-Archive 'vbnet' `
+            @("samples/vbnet/vbtest/bin/Release/vbtest.dll",
+              "samples/vbnet/capture/bin/Release/capture.dll") `
+            ($sheetsCommon + @(
+              "$ws/vbnet-capture-mp6.mcdx",
+              "$ws/vbnet-capture-mc15.xmcd"
+            ))
 
       - name: Upload ZIP archives
         uses: actions/upload-artifact@v4
@@ -200,8 +219,6 @@ jobs:
           path: src/NetEFI.Abstractions/bin/Release/net48
 
       - name: Pack
-        # Флаг -Version, а не -Properties version= (это ошибка).
-        # -Properties используется только для $token$-переменных в nuspec.
         run: >
           nuget pack build/NetEFI.Framework.nuspec
           -Version ${{ steps.ver.outputs.value }}
@@ -209,9 +226,6 @@ jobs:
           -NonInteractive
 
 #      - name: Publish
-#        # Имя секрета в GitHub: NUGET_API_KEY
-#        # (ключ на nuget.org называется "NetEFI-GitHubActions-CI" —
-#        #  это не важно, важно только имя секрета в репозитории)
 #        run: >
 #          nuget push _nupkg/*.nupkg
 #          -ApiKey ${{ secrets.NUGET_API_KEY }}
@@ -266,27 +280,31 @@ jobs:
           generate_release_notes: true
           files: release/*
           body: |
-            ## Установка через NuGet
+            ## Install via NuGet
             ```powershell
             Install-Package NetEFI.Framework -Version ${{ steps.ver.outputs.value }}
             ```
 
-            ## Готовые примеры
+            ## Ready-to-use Samples
 
-            Скачайте архив для вашего языка и разрядности Mathcad,
-            распакуйте **все файлы** в папку Custom Functions:
+            > ⚠️ **Before extracting:** right-click the `.zip` file → **Properties** → check **Unblock** → OK.
+            > Without this step Windows will block the DLLs from loading.
 
-            | Язык     | 64-бит (Mathcad Prime)         | 32-бит (Mathcad 15)            |
-            |----------|--------------------------------|--------------------------------|
-            | C#       | samples-csharp-x64.zip         | samples-csharp-x86.zip         |
-            | VB.NET   | samples-vbnet-x64.zip          | samples-vbnet-x86.zip          |
-            | F#       | samples-fsharp-x64.zip         | samples-fsharp-x86.zip         |
-            | C++/CLI  | samples-cppcli-x64.zip         | samples-cppcli-x86.zip         |
+            Download the archive for your language and Mathcad bitness,
+            extract **all files** into the Custom Functions folder.
+            Each archive includes a `worksheets/` folder with ready-made Mathcad documents.
 
-            **Путь установки:**
+            | Language | 64-bit (Mathcad Prime)  | 32-bit (Mathcad 15)     |
+            |----------|-------------------------|-------------------------|
+            | C#       | samples-csharp-x64.zip  | samples-csharp-x86.zip  |
+            | VB.NET   | samples-vbnet-x64.zip   | samples-vbnet-x86.zip   |
+            | F#       | samples-fsharp-x64.zip  | samples-fsharp-x86.zip  |
+            | C++/CLI  | samples-cppcli-x64.zip  | samples-cppcli-x86.zip  |
+
+            **Installation path:**
             - Mathcad 15 (x86): `C:\Program Files (x86)\Mathcad\Mathcad 15\userefi\`
             - Mathcad Prime (x64): `C:\Program Files\PTC\Mathcad Prime X.X.X.X\Custom Functions\`
 
-            **Проверка:** `netefi("info")` → `"NetEFI: 32-bit, ${{ steps.ver.outputs.value }}, ..."`
+            **Verify:** open a file from the `worksheets/` folder, or call `netefi("info")` in any worksheet.
 
-            **Лог:** `%AppData%\Mathsoft\Mathcad\NetEFI.log`
+            **Log:** `%AppData%\Mathsoft\Mathcad\NetEFI.log`

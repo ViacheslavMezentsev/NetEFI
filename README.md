@@ -5,7 +5,6 @@
 [![GitHub](https://img.shields.io/github/license/ViacheslavMezentsev/NetEFI)](https://github.com/ViacheslavMezentsev/NetEFI/blob/master/LICENSE)
 [![CI](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/ci.yml/badge.svg)](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/ci.yml)
 [![Release](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/release.yml/badge.svg)](https://github.com/ViacheslavMezentsev/NetEFI/actions/workflows/release.yml)
-[![Built with Claude](https://img.shields.io/badge/Built%20with-Claude-blueviolet?logo=anthropic)](https://claude.ai)
 
 Фреймворк для создания пользовательских функций **Mathcad 15** и **Mathcad Prime** на любом .NET-языке (C#, VB.NET, F#, C++/CLI). Избавляет от необходимости писать код на C++: простой API на основе атрибутов позволяет сосредоточиться на логике функции в привычной строго-типизированной управляемой среде.
 
@@ -39,6 +38,11 @@
    - *прочие зависимости, например `Newtonsoft.Json.dll` или `FSharp.Core.dll`*
    - **Mathcad Prime**: `%ProgramFiles%\PTC\Mathcad Prime X.X.X.X\Custom Functions\`
    - **Mathcad 15**: `%ProgramFiles(x86)%\Mathcad\Mathcad 15\userefi\`
+
+> ⚠️ **Важно:** если файлы скачаны из интернета (например, из архива релиза GitHub),
+> перед распаковкой нажмите на архив правой кнопкой мыши → **Свойства** →
+> поставьте галочку **Разблокировать** → OK. Без этого Windows заблокирует
+> загрузку DLL и функции не появятся в Mathcad.
 
 ---
 
@@ -177,6 +181,14 @@ NetEFI умеет автоматически генерировать XML-фай
 - **Развёртывание F#**: при использовании F# необходимо скопировать рантайм **`FSharp.Core.dll`** в папку `Custom Functions`.
 
 ---
+
+## Благодарности
+
+В разработке проекта использовалась помощь ИИ-инструментов:
+[Claude](https://claude.ai) (Anthropic), [Gemini](https://gemini.google.com) (Google)
+и [Qwen](https://qwen.ai) (Alibaba Cloud).
+
+---
 ---
 
 # NetEFI Framework for Mathcad
@@ -213,6 +225,10 @@ This framework allows you to create user-defined functions for **Mathcad 15** an
    - *Any other dependencies, like `Newtonsoft.Json.dll` or `FSharp.Core.dll`.*
    - **Mathcad Prime**: `%ProgramFiles%\PTC\Mathcad Prime X.X.X.X\Custom Functions\`
    - **Mathcad 15**: `%ProgramFiles(x86)%\Mathcad\Mathcad 15\userefi\`
+
+> ⚠️ **Important:** if you downloaded the files from the internet (e.g. from a GitHub release archive),
+> right-click the `.zip` file before extracting → **Properties** → check **Unblock** → OK.
+> Without this step Windows will block the DLLs and functions will not appear in Mathcad.
 
 ---
 
@@ -349,3 +365,11 @@ To check the host version, call in a worksheet: `netefi("info")`
 - **Static Error Messages:** The text for custom error messages is defined at compile time via `[Error]` attributes and cannot be changed dynamically during execution.
 - **String Encoding (ANSI only):** Mathcad's legacy API expects all strings to be in a single-byte ANSI encoding. Any Unicode character without a single-byte ANSI representation (e.g., emoji 😊) will be corrupted.
 - **F# Deployment:** When deploying a library written in F#, you must also copy the F# runtime library **`FSharp.Core.dll`** to the `Custom Functions` directory.
+
+---
+
+## Acknowledgements
+
+This project was developed with assistance from AI tools:
+[Claude](https://claude.ai) (Anthropic), [Gemini](https://gemini.google.com) (Google),
+and [Qwen](https://qwen.ai) (Alibaba Cloud).
