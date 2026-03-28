@@ -4,10 +4,10 @@
     <id>NetEFI.Framework</id>
     <version>$version$</version>
     <!--
-      Если собирать локально вручную:
-        nuget pack build\NetEFI.Framework.nuspec ^
-          -Properties version=0.5.1-test ^
-          -OutputDirectory build
+      В CI версия передаётся флагом -Version из git-тега (v0.5.1 → 0.5.1).
+      Для локальной сборки оба варианта равнозначны:
+        nuget pack build\NetEFI.Framework.nuspec -Version 0.5.1-test -OutputDirectory build
+        nuget pack build\NetEFI.Framework.nuspec -Properties version=0.5.1-test -OutputDirectory build
     -->
     <title>NetEFI Framework for Mathcad</title>
     <authors>Viacheslav N. Mezentsev</authors>

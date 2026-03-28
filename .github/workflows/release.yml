@@ -6,11 +6,14 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'   # v0.5.0, v1.0.0, etc.
 
 permissions:
-  contents: write  # нужно для создания GitHub Release
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Job 1: сборка основного фреймворка (x86 + x64)
+  # Job 1: сборка фреймворка (параллельно x86 и x64)
   # ─────────────────────────────────────────────────────────────
   build-framework:
     name: Build Framework (${{ matrix.platform }})
@@ -20,42 +23,29 @@ jobs:
         platform: [x64, x86]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - uses: nuget/setup-nuget@v2
         with:
           nuget-version: 'latest'
 
-      - name: Restore NuGet packages
-        run: nuget restore NetEFI.sln
-
-      - name: Extract version from tag
-        id: version
+      - name: Extract version
+        id: ver
         shell: bash
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Build NetEFI host (${{ matrix.platform }})
+      - name: Restore
+        run: nuget restore src/NetEFI.sln
+
+      - name: Build
         run: >
-          msbuild src/NetEFI/NetEFI.vcxproj
+          msbuild src/NetEFI.sln
           /p:Configuration=Release
           /p:Platform=${{ matrix.platform }}
-          /p:Version=${{ steps.version.outputs.version }}
+          /p:Version=${{ steps.ver.outputs.value }}
           /m /v:minimal
 
-      - name: Build NetEFI.Abstractions
-        if: matrix.platform == 'x64'
-        run: >
-          msbuild src/NetEFI.Abstractions/NetEFI.Abstractions.csproj
-          /p:Configuration=Release
-          /p:Version=${{ steps.version.outputs.version }}
-          /m /v:minimal
-
-      - name: Upload NetEFI.dll (${{ matrix.platform }})
+      - name: Upload NetEFI.dll
         uses: actions/upload-artifact@v4
         with:
           name: netefi-host-${{ matrix.platform }}
@@ -71,7 +61,7 @@ jobs:
           if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
-  # Job 2: сборка примеров (x86 + x64)
+  # Job 2: сборка примеров + упаковка ZIP (параллельно x86/x64)
   # ─────────────────────────────────────────────────────────────
   build-samples:
     name: Build Samples (${{ matrix.platform }})
@@ -82,83 +72,94 @@ jobs:
         platform: [x64, x86]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - uses: nuget/setup-nuget@v2
         with:
           nuget-version: 'latest'
 
-      - name: Download NetEFI.dll (${{ matrix.platform }})
+      - name: Extract version
+        id: ver
+        shell: bash
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download NetEFI.dll
         uses: actions/download-artifact@v4
         with:
           name: netefi-host-${{ matrix.platform }}
-          path: _artifacts/netefi-host-${{ matrix.platform }}
+          path: _host/${{ matrix.platform }}
 
       - name: Download NetEFI.Abstractions.dll
         uses: actions/download-artifact@v4
         with:
           name: netefi-abstractions
-          path: _artifacts/netefi-abstractions
+          path: _host/abstractions
 
-      - name: Restore NuGet packages (samples)
+      - name: Restore
         run: nuget restore samples/samples.sln
 
-      - name: Build all samples (${{ matrix.platform }})
+      - name: Build
         run: >
           msbuild samples/samples.sln
           /p:Configuration=Release
           /p:Platform=${{ matrix.platform }}
           /m /v:minimal
 
-      # ── Собираем staging-папку для ZIP ──────────────────────
-      - name: Prepare staging directory
+      # Создаём ZIP-архивы прямо здесь — по одному на язык.
+      # INSTALL.txt хранится в репозитории (samples/INSTALL.txt),
+      # никакой генерации в workflow не нужно.
+      - name: Package archives
         shell: pwsh
         run: |
-          $platform = "${{ matrix.platform }}"
-          $stage = "_stage/$platform"
-          New-Item -ItemType Directory -Force $stage
+          $plat = "${{ matrix.platform }}"
+          $ver  = "${{ steps.ver.outputs.value }}"
+          $host = "_host/$plat/NetEFI.dll"
+          $abs  = "_host/abstractions/NetEFI.Abstractions.dll"
+          $inst = "samples/INSTALL.txt"
 
-          # NetEFI host
-          Copy-Item "_artifacts/netefi-host-$platform/NetEFI.dll"       $stage
-          Copy-Item "_artifacts/netefi-abstractions/NetEFI.Abstractions.dll" $stage
-
-          # C# sample
-          Copy-Item "samples/csharp/cstest/bin/$platform/Release/cstest.dll" $stage -ErrorAction SilentlyContinue
-          Copy-Item "samples/csharp/cstools/bin/$platform/Release/cstools.dll" $stage -ErrorAction SilentlyContinue
-
-          # VB.NET sample
-          Copy-Item "samples/vbnet/vbtest/bin/$platform/Release/vbtest.dll" $stage -ErrorAction SilentlyContinue
-
-          # F# sample (net48 output path)
-          $fsOutDir = "samples/fsharp/fstest/bin/$platform/Release/net48"
-          if (Test-Path $fsOutDir) {
-            Copy-Item "$fsOutDir/fstest.dll"      $stage -ErrorAction SilentlyContinue
-            Copy-Item "$fsOutDir/FSharp.Core.dll" $stage -ErrorAction SilentlyContinue
+          function New-Archive {
+            param($lang, [string[]]$extra)
+            $dir = "_zip/$lang"
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Copy-Item $host $dir
+            Copy-Item $abs  $dir
+            Copy-Item $inst $dir
+            foreach ($f in $extra) {
+              if (Test-Path $f) { Copy-Item $f $dir }
+              else { Write-Warning "Not found: $f" }
+            }
+            $zip = "netefi-v$ver-samples-$lang-$plat.zip"
+            Compress-Archive -Path "$dir\*" -DestinationPath $zip -Force
+            Write-Host "Created: $zip"
           }
 
-          # C++/CLI sample
-          Copy-Item "samples/cppcli/cpptest/$platform/Release/cpptest.dll" $stage -ErrorAction SilentlyContinue
+          New-Archive 'cppcli' @(
+            "samples/cppcli/cpptest/$plat/Release/cpptest.dll"
+          )
 
-          # Install instructions
-          Copy-Item "samples/INSTALL.txt" $stage -ErrorAction SilentlyContinue
+          New-Archive 'csharp' @(
+            "samples/csharp/cstest/bin/$plat/Release/cstest.dll",
+            "samples/csharp/cstools/bin/$plat/Release/cstools.dll"
+          )
 
-          Write-Host "Staging contents:"
-          Get-ChildItem $stage
+          New-Archive 'fsharp' @(
+            "samples/fsharp/fstest/bin/$plat/Release/net48/fstest.dll",
+            "samples/fsharp/fstest/bin/$plat/Release/net48/FSharp.Core.dll"
+          )
 
-      - name: Upload staging (${{ matrix.platform }})
+          New-Archive 'vbnet' @(
+            "samples/vbnet/vbtest/bin/$plat/Release/vbtest.dll"
+          )
+
+      - name: Upload ZIP archives
         uses: actions/upload-artifact@v4
         with:
-          name: samples-staged-${{ matrix.platform }}
-          path: _stage/${{ matrix.platform }}/
-          if-no-files-found: warn
+          name: zips-${{ matrix.platform }}
+          path: netefi-v*.zip
+          if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
-  # Job 3: упаковка NuGet и публикация
+  # Job 3: упаковка и публикация NuGet
   # ─────────────────────────────────────────────────────────────
   pack-and-publish:
     name: Pack & Publish NuGet
@@ -166,18 +167,15 @@ jobs:
     needs: build-framework
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+      - uses: actions/checkout@v4
+      - uses: nuget/setup-nuget@v2
         with:
           nuget-version: 'latest'
 
-      - name: Extract version from tag
-        id: version
+      - name: Extract version
+        id: ver
         shell: bash
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Download NetEFI.dll (x64)
         uses: actions/download-artifact@v4
@@ -197,26 +195,32 @@ jobs:
           name: netefi-abstractions
           path: src/NetEFI.Abstractions/bin/Release/net48
 
-      - name: Pack NuGet package
+      - name: Pack
+        # Флаг -Version, а не -Properties version= (это ошибка).
+        # -Properties используется только для $token$-переменных в nuspec.
         run: >
           nuget pack build/NetEFI.Framework.nuspec
-          -Properties version=${{ steps.version.outputs.version }}
+          -Version ${{ steps.ver.outputs.value }}
           -OutputDirectory _nupkg
           -NonInteractive
 
-      - name: Upload .nupkg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nupkg
-          path: _nupkg/*.nupkg
-          if-no-files-found: error
-
-      - name: Publish to NuGet.org
-        run: >
-          nuget push _nupkg/*.nupkg
-          -ApiKey ${{ secrets.NUGET_API_KEY }}
-          -Source https://api.nuget.org/v3/index.json
-          -NonInteractive
+ #     - name: Publish
+ #       # Имя секрета в GitHub: NUGET_API_KEY
+ #       # (ключ на nuget.org называется "NetEFI-GitHubActions-CI" —
+ #       #  это не важно, важно только имя секрета в репозитории)
+ #       run: >
+ #         nuget push _nupkg/*.nupkg
+ #         -ApiKey ${{ secrets.NUGET_API_KEY }}
+ #         -Source https://api.nuget.org/v3/index.json
+ #         -SkipDuplicate
+ #         -NonInteractive
+ #
+ #     - name: Upload .nupkg
+ #       uses: actions/upload-artifact@v4
+ #       with:
+ #         name: nupkg
+ #         path: _nupkg/*.nupkg
+ #         if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
   # Job 4: создание GitHub Release
@@ -227,57 +231,58 @@ jobs:
     needs: [build-samples, pack-and-publish]
 
     steps:
-      - name: Checkout (нужен для CHANGELOG)
-        uses: actions/checkout@v4
+      - name: Extract version
+        id: ver
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Download all artifacts
+      - name: Download ZIP archives (x64)
         uses: actions/download-artifact@v4
         with:
-          path: _all-artifacts
+          name: zips-x64
+          path: release/
 
-      - name: Build ZIP archives
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
+      - name: Download ZIP archives (x86)
+        uses: actions/download-artifact@v4
+        with:
+          name: zips-x86
+          path: release/
 
-          for ARCH in x64 x86; do
-            SRC="_all-artifacts/samples-staged-${ARCH}"
-            if [ -d "$SRC" ]; then
-              zip -j "netefi-v${VERSION}-samples-${ARCH}.zip" "$SRC"/*
-              echo "Created netefi-v${VERSION}-samples-${ARCH}.zip"
-            else
-              echo "WARNING: staging dir $SRC not found, skipping ${ARCH} zip"
-            fi
-          done
+      - name: Download .nupkg
+        uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: release/
 
-          # Копируем .nupkg
-          cp _all-artifacts/nupkg/*.nupkg . 2>/dev/null || true
-
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "NetEFI Framework v${{ steps.version.outputs.version }}"
+          name: "NetEFI Framework v${{ steps.ver.outputs.value }}"
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}  # v1.0.0-beta → prerelease
-          generate_release_notes: true   # авто-changelog из коммитов
-          files: |
-            netefi-v${{ steps.version.outputs.version }}-samples-x64.zip
-            netefi-v${{ steps.version.outputs.version }}-samples-x86.zip
-            NetEFI.Framework.${{ steps.version.outputs.version }}.nupkg
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: release/*
           body: |
-            ## Установка
-
-            ### Через NuGet (рекомендуется)
-            ```
-            Install-Package NetEFI.Framework -Version ${{ steps.version.outputs.version }}
+            ## Установка через NuGet
+            ```powershell
+            Install-Package NetEFI.Framework -Version ${{ steps.ver.outputs.value }}
             ```
 
-            ### Готовые примеры
-            Скачайте ZIP для вашей версии Mathcad:
-            - **`netefi-v${{ steps.version.outputs.version }}-samples-x64.zip`** — Mathcad Prime (64-бит)
-            - **`netefi-v${{ steps.version.outputs.version }}-samples-x86.zip`** — Mathcad 15 (32-бит)
+            ## Готовые примеры
 
-            Распакуйте все файлы в папку Custom Functions вашей установки Mathcad.
+            Скачайте архив для вашего языка и разрядности Mathcad,
+            распакуйте **все файлы** в папку Custom Functions:
+
+            | Язык     | 64-бит (Mathcad Prime)         | 32-бит (Mathcad 15)            |
+            |----------|--------------------------------|--------------------------------|
+            | C#       | samples-csharp-x64.zip         | samples-csharp-x86.zip         |
+            | VB.NET   | samples-vbnet-x64.zip          | samples-vbnet-x86.zip          |
+            | F#       | samples-fsharp-x64.zip         | samples-fsharp-x86.zip         |
+            | C++/CLI  | samples-cppcli-x64.zip         | samples-cppcli-x86.zip         |
+
+            **Путь установки:**
+            - Mathcad 15 (x86): `C:\Program Files (x86)\Mathcad\Mathcad 15\userefi\`
+            - Mathcad Prime (x64): `C:\Program Files\PTC\Mathcad Prime X.X.X.X\Custom Functions\`
+
+            **Проверка:** `netefi("info")` → `"NetEFI: 32-bit, ${{ steps.ver.outputs.value }}, ..."`
+
+            **Лог:** `%AppData%\Mathsoft\Mathcad\NetEFI.log`

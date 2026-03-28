@@ -1,38 +1,129 @@
-NetEFI Framework — Примеры пользовательских функций
-====================================================
-
-Эти DLL демонстрируют возможности NetEFI Framework и готовы
-к немедленному использованию в Mathcad.
+NetEFI Framework — Установка и проверка
+========================================
 
 УСТАНОВКА
 ---------
 
-1. Скопируйте ВСЕ файлы из этого архива в папку Custom Functions:
+1. Скопируйте ВСЕ файлы из этого архива в папку Custom Functions вашей
+   установки Mathcad:
 
-   Mathcad Prime:
-     %ProgramFiles%\PTC\Mathcad Prime X.X.X.X\Custom Functions\
+   Mathcad 15 (32-бит):
+     C:\Program Files (x86)\Mathcad\Mathcad 15\userefi\
 
-   Mathcad 15:
-     %ProgramFiles%\Mathcad\Mathcad 15\userefi\
+   Mathcad Prime (64-бит):
+     C:\Program Files\PTC\Mathcad Prime X.X.X.X\Custom Functions\
+
+   Для установки потребуются права администратора.
 
 2. Перезапустите Mathcad.
 
-3. Проверьте в рабочем листе:
-     cs_sum(1, 2)     → 3   (C#)
-     vb_product(2, 3) → 6   (VB.NET)
-     fs_power(2, 8)   → 256 (F#)
-     cpp_diff(5, 3)   → 2   (C++/CLI)
+3. Проверьте работу, набрав в рабочем листе:
 
-СОДЕРЖИМОЕ
-----------
-  NetEFI.dll               — C++/CLI хост (обязателен)
-  NetEFI.Abstractions.dll  — managed API (обязателен)
-  cstest.dll               — примеры функций на C#
-  vbtest.dll               — примеры функций на VB.NET
-  fstest.dll               — примеры функций на F#
-  FSharp.Core.dll          — рантайм F# (нужен для fstest.dll)
-  cpptest.dll              — примеры функций на C++/CLI
+     netefi("info")
 
-ДОКУМЕНТАЦИЯ
+   Ожидаемый результат (пример):
+
+     "NetEFI: 32-bit, 0.5.9582.38950, 27-мар-2026 21:38:20"
+
+МИНИМАЛЬНЫЙ НАБОР ФАЙЛОВ
+-------------------------
+
+Для работы любой пользовательской библиотеки необходимо, чтобы
+в папке userefi / Custom Functions присутствовали:
+
+   netefi.dll               — C++/CLI хост (обязателен)
+   NetEFI.Abstractions.dll  — managed API  (обязателен)
+
+Эти два файла уже включены в данный архив.
+
+СОДЕРЖИМОЕ АРХИВА
+-----------------
+
+   netefi.dll               — C++/CLI хост
+   NetEFI.Abstractions.dll  — managed API
+   <sample>.dll             — пример пользовательской библиотеки
+   FSharp.Core.dll          — рантайм F# (только в архиве fsharp)
+   INSTALL.txt              — этот файл
+
+ДИАГНОСТИКА
+-----------
+
+Лог-файл создаётся при каждом запуске Mathcad:
+
+   %AppData%\Mathsoft\Mathcad\NetEFI.log
+
+Пример содержимого:
+
+   28.03.2026 00:34:06 [INFO ] Assembly loaded: ...\userefi\NetEFI.Abstractions.dll
+   28.03.2026 00:34:06 [INFO ] OS: Microsoft Windows NT 6.2.9200.0, 64-bit: True
+   28.03.2026 00:34:06 [INFO ] NetEFI: 32-bit release version 0.5.9582.38950
+   28.03.2026 00:34:06 [INFO ] NetEFI.dll: 1 function(s) loaded.
+
+Если в логе появляются ошибки — убедитесь, что установлен .NET Framework 4.8.
+
+========================================================================
+
+NetEFI Framework — Installation Guide
+======================================
+
+INSTALLATION
 ------------
-  https://github.com/ViacheslavMezentsev/NetEFI
+
+1. Copy ALL files from this archive to the Mathcad Custom Functions folder:
+
+   Mathcad 15 (32-bit):
+     C:\Program Files (x86)\Mathcad\Mathcad 15\userefi\
+
+   Mathcad Prime (64-bit):
+     C:\Program Files\PTC\Mathcad Prime X.X.X.X\Custom Functions\
+
+   Administrator rights are required to copy files to Program Files.
+
+2. Restart Mathcad.
+
+3. Verify by typing in a worksheet:
+
+     netefi("info")
+
+   Expected result (example):
+
+     "NetEFI: 32-bit, 0.5.9582.38950, 27-Mar-2026 21:38:20"
+
+REQUIRED FILES
+--------------
+
+The following two files must be present in the userefi / Custom Functions
+folder for any user library to work:
+
+   netefi.dll               — C++/CLI host (required)
+   NetEFI.Abstractions.dll  — managed API  (required)
+
+Both files are already included in this archive.
+
+ARCHIVE CONTENTS
+----------------
+
+   netefi.dll               — C++/CLI host
+   NetEFI.Abstractions.dll  — managed API
+   <sample>.dll             — sample user library
+   FSharp.Core.dll          — F# runtime (fsharp archive only)
+   INSTALL.txt              — this file
+
+DIAGNOSTICS
+-----------
+
+A log file is created on every Mathcad startup:
+
+   %AppData%\Mathsoft\Mathcad\NetEFI.log
+
+Sample output:
+
+   28.03.2026 00:34:06 [INFO ] Assembly loaded: ...\userefi\NetEFI.Abstractions.dll
+   28.03.2026 00:34:06 [INFO ] OS: Microsoft Windows NT 6.2.9200.0, 64-bit: True
+   28.03.2026 00:34:06 [INFO ] NetEFI: 32-bit release version 0.5.9582.38950
+   28.03.2026 00:34:06 [INFO ] NetEFI.dll: 1 function(s) loaded.
+
+If errors appear — make sure .NET Framework 4.8 is installed.
+
+========================================================================
+https://github.com/ViacheslavMezentsev/NetEFI
