@@ -111,19 +111,19 @@ jobs:
       - name: Package archives
         shell: pwsh
         run: |
-          $plat = "${{ matrix.platform }}"
-          $ver  = "${{ steps.ver.outputs.value }}"
-          $host = "_host/$plat/NetEFI.dll"
-          $abs  = "_host/abstractions/NetEFI.Abstractions.dll"
-          $inst = "samples/INSTALL.txt"
+          $plat   = "${{ matrix.platform }}"
+          $ver    = "${{ steps.ver.outputs.value }}"
+          $netefi = "_host/$plat/NetEFI.dll"
+          $abs    = "_host/abstractions/NetEFI.Abstractions.dll"
+          $inst   = "samples/INSTALL.txt"
 
           function New-Archive {
             param($lang, [string[]]$extra)
             $dir = "_zip/$lang"
             New-Item -ItemType Directory -Force $dir | Out-Null
-            Copy-Item $host $dir
-            Copy-Item $abs  $dir
-            Copy-Item $inst $dir
+            Copy-Item $netefi $dir
+            Copy-Item $abs    $dir
+            Copy-Item $inst   $dir
             foreach ($f in $extra) {
               if (Test-Path $f) { Copy-Item $f $dir }
               else { Write-Warning "Not found: $f" }
@@ -133,22 +133,26 @@ jobs:
             Write-Host "Created: $zip"
           }
 
+          # C++/CLI: платформа в пути есть (vcxproj → $plat\Release\)
           New-Archive 'cppcli' @(
             "samples/cppcli/cpptest/$plat/Release/cpptest.dll"
           )
 
+          # C#: платформы в пути нет (csproj → bin\Release\)
           New-Archive 'csharp' @(
-            "samples/csharp/cstest/bin/$plat/Release/cstest.dll",
-            "samples/csharp/cstools/bin/$plat/Release/cstools.dll"
+            "samples/csharp/cstest/bin/Release/cstest.dll",
+            "samples/csharp/cstools/bin/Release/cstools.dll"
           )
 
+          # F#: платформа есть (SDK-style → bin\$plat\Release\net48\)
           New-Archive 'fsharp' @(
             "samples/fsharp/fstest/bin/$plat/Release/net48/fstest.dll",
             "samples/fsharp/fstest/bin/$plat/Release/net48/FSharp.Core.dll"
           )
 
+          # VB.NET: платформы в пути нет (vbproj → bin\Release\)
           New-Archive 'vbnet' @(
-            "samples/vbnet/vbtest/bin/$plat/Release/vbtest.dll"
+            "samples/vbnet/vbtest/bin/Release/vbtest.dll"
           )
 
       - name: Upload ZIP archives
@@ -204,23 +208,23 @@ jobs:
           -OutputDirectory _nupkg
           -NonInteractive
 
- #     - name: Publish
- #       # Имя секрета в GitHub: NUGET_API_KEY
- #       # (ключ на nuget.org называется "NetEFI-GitHubActions-CI" —
- #       #  это не важно, важно только имя секрета в репозитории)
- #       run: >
- #         nuget push _nupkg/*.nupkg
- #         -ApiKey ${{ secrets.NUGET_API_KEY }}
- #         -Source https://api.nuget.org/v3/index.json
- #         -SkipDuplicate
- #         -NonInteractive
- #
- #     - name: Upload .nupkg
- #       uses: actions/upload-artifact@v4
- #       with:
- #         name: nupkg
- #         path: _nupkg/*.nupkg
- #         if-no-files-found: error
+#      - name: Publish
+#        # Имя секрета в GitHub: NUGET_API_KEY
+#        # (ключ на nuget.org называется "NetEFI-GitHubActions-CI" —
+#        #  это не важно, важно только имя секрета в репозитории)
+#        run: >
+#          nuget push _nupkg/*.nupkg
+#          -ApiKey ${{ secrets.NUGET_API_KEY }}
+#          -Source https://api.nuget.org/v3/index.json
+#          -SkipDuplicate
+#          -NonInteractive
+#
+#      - name: Upload .nupkg
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: nupkg
+#          path: _nupkg/*.nupkg
+#          if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────
   # Job 4: создание GitHub Release
